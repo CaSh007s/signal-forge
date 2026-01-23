@@ -1,0 +1,65 @@
+import os
+import warnings
+import yfinance as yf
+from dotenv import load_dotenv
+
+# 1. Force load environment variables immediately
+load_dotenv()
+
+# 2. Suppress the specific LangChain deprecation warning to keep logs clean
+warnings.filterwarnings("ignore", category=UserWarning, module="langchain")
+
+# 3. Use the community import
+from langchain_community.tools.tavily_search import TavilySearchResults
+from langchain_community.tools import DuckDuckGoSearchRun
+
+# Verify key exists
+if not os.getenv("TAVILY_API_KEY"):
+    print("⚠️ WARNING: TAVILY_API_KEY not found. Search will fail.")
+
+# Initialize Search Tools
+tavily_tool = TavilySearchResults(max_results=3)
+ddg_tool = DuckDuckGoSearchRun()
+
+def fetch_stock_data(company_symbol: str):
+    """
+    Fetches historical stock data and current info using yfinance.
+    """
+    try:
+        ticker = yf.Ticker(company_symbol)
+        hist = ticker.history(period="1mo")
+        
+        if hist.empty:
+            return {"error": "No stock data found"}
+
+        start_price = hist["Close"].iloc[0]
+        end_price = hist["Close"].iloc[-1]
+        growth = ((end_price - start_price) / start_price) * 100
+
+        return {
+            "current_price": round(end_price, 2),
+            "start_price_1mo": round(start_price, 2),
+            "growth_1mo_percent": round(growth, 2),
+            "currency": ticker.info.get("currency", "USD")
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+def search_market_news(company_name: str):
+    """
+    Searches for recent market news about the company.
+    """
+    query = f"{company_name} stock market news analysis finance"
+    
+    try:
+        results = tavily_tool.invoke({"query": query})
+        # Handle the list of dicts return format from the community tool
+        content = ""
+        if isinstance(results, list):
+            content = "\n".join([r.get("content", "") for r in results])
+        else:
+            content = str(results)
+        return content
+    except Exception as e:
+        print(f"Tavily error: {e}. Fallback to DuckDuckGo...")
+        return ddg_tool.invoke(query)
