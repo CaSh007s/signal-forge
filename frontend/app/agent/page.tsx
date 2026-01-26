@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { useRouter } from "next/navigation";
 import { removeToken } from "@/lib/auth";
 import { Bot, Search, Terminal, TrendingUp, LogOut } from "lucide-react";
+import { ModeToggle } from "@/components/mode-toggle";
 
 export default function Home() {
   const [company, setCompany] = useState("");
@@ -48,6 +49,7 @@ export default function Home() {
               </div>
             </div>
             <div className="flex items-center gap-4">
+              <ModeToggle />
               <Badge
                 variant="outline"
                 className="border-emerald-500/30 text-emerald-400 bg-emerald-500/5"
