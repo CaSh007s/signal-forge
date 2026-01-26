@@ -9,15 +9,23 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Bot, Search, Terminal, TrendingUp } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { removeToken } from "@/lib/auth";
+import { Bot, Search, Terminal, TrendingUp, LogOut } from "lucide-react";
 
 export default function Home() {
   const [company, setCompany] = useState("");
   const { messages, report, isStreaming, startResearch } = useAgent();
+  const router = useRouter();
 
   const handleSearch = () => {
     if (!company) return;
     startResearch(company);
+  };
+
+  const handleLogout = () => {
+    removeToken();
+    router.push("/login");
   };
 
   return (
@@ -38,6 +46,23 @@ export default function Home() {
                   Autonomous Market Research Agent
                 </p>
               </div>
+            </div>
+            <div className="flex items-center gap-4">
+              <Badge
+                variant="outline"
+                className="border-emerald-500/30 text-emerald-400 bg-emerald-500/5"
+              >
+                v1.0.0
+              </Badge>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="text-slate-400 hover:text-white hover:bg-slate-800"
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Sign Out
+              </Button>
             </div>
             <Badge
               variant="outline"
