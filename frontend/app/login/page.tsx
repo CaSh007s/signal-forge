@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { setToken } from "@/lib/auth";
+import { setToken, isAuthenticated } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,6 +21,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated()) {
+      router.push("/agent");
+    }
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,8 +49,8 @@ export default function LoginPage() {
       }
 
       const data = await res.json();
-      setToken(data.access_token); // Save the key!
-      router.push("/agent"); // Go to the app
+      setToken(data.access_token);
+      router.push("/agent");
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -55,6 +61,10 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  if (typeof window !== "undefined" && isAuthenticated()) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-950 px-4">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -13,9 +13,15 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { AlertCircle, Loader2 } from "lucide-react";
+import { setToken, isAuthenticated } from "@/lib/auth";
 
 export default function RegisterPage() {
   const router = useRouter();
+  useEffect(() => {
+    if (isAuthenticated()) {
+      router.push("/agent");
+    }
+  }, [router]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
