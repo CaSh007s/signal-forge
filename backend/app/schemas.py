@@ -1,20 +1,39 @@
 from pydantic import BaseModel, EmailStr
+from datetime import datetime
+from typing import List, Optional
 
-# 1. Base User Schema (Shared properties)
+# User Schemas
 class UserBase(BaseModel):
     email: EmailStr
 
-# 2. Schema for Creating a User (Incoming Data)
 class UserCreate(UserBase):
     password: str
 
-# 3. Schema for Reading a User (Outgoing Data)
 class User(UserBase):
     id: int
     class Config:
         from_attributes = True
 
-# 4. Schema for the Token (What we send back on login)
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+# Report Schemas
+class ReportBase(BaseModel):
+    company_name: str
+    report_content: str
+
+class ReportCreate(ReportBase):
+    pass
+
+class Report(ReportBase):
+    id: int
+    created_at: datetime
+    user_id: int
+
+    class Config:
+        from_attributes = True
+
+# Update User to include reports
+class UserWithReports(User):
+    reports: List[Report] = []

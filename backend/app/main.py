@@ -3,18 +3,16 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from redis import asyncio as aioredis
 from fastapi_limiter import FastAPILimiter
-
-# NEW IMPORTS
 from app import models
 from app.db import engine
-from app.api import endpoints, auth
+from app.api import endpoints, auth, reports
 
-# LIFESPAN
+# Lifespan event to handle startup and shutdown tasks
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # 1. Create DB Tables
     models.Base.metadata.create_all(bind=engine)
-    print("✅ Database Tables Created")
+    print("✅ Database Tables Created (Supabase)")
 
     # 2. Connect to Redis
     try:
@@ -30,7 +28,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="SignalForge API", version="0.1.0", lifespan=lifespan)
 
-# CORS
+# CORS Middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000"],
@@ -42,6 +40,7 @@ app.add_middleware(
 # Connect Routes
 app.include_router(endpoints.router, prefix="/api", tags=["agent"])
 app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(reports.router, prefix="/api/reports", tags=["reports"])
 
 @app.get("/health")
 async def health_check():
