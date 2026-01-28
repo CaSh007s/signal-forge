@@ -1,150 +1,243 @@
+"use client";
+
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ArrowRight, BarChart3, Globe, Zap, ShieldCheck } from "lucide-react";
+import {
+  ArrowRight,
+  BarChart3,
+  ShieldCheck,
+  Zap,
+  Terminal,
+} from "lucide-react";
+import { motion, Variants } from "framer-motion";
+
+// Motion Variants
+const fadeInUp: Variants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.5, ease: "easeOut" },
+  },
+};
+
+const staggerContainer: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.1 },
+  },
+};
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-emerald-500/30">
-      {/* Navigation */}
-      <nav className="border-b border-slate-800/60 bg-slate-950/50 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 bg-emerald-500/10 rounded-lg flex items-center justify-center border border-emerald-500/20">
-              <BarChart3 className="text-emerald-400 h-5 w-5" />
+    <div className="min-h-screen flex flex-col font-sans selection:bg-accent/20">
+      {/* 1. GLASS NAVBAR */}
+      <nav className="sticky top-0 z-50 border-b border-border/40 bg-bg/80 backdrop-blur-md">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <Link href="/" className="group flex items-center gap-2">
+            <div className="h-8 w-8 bg-accent/10 rounded-lg flex items-center justify-center border border-accent/20 group-hover:border-accent/50 transition-colors">
+              <Terminal className="text-accent h-4 w-4" />
             </div>
-            <span className="font-bold text-lg tracking-tight text-white">
+            <span className="font-brand font-bold text-lg tracking-tight transition-all duration-300 group-hover:-translate-y-[1px] group-hover:tracking-wide group-hover:[text-shadow:0_0_12px_rgba(52,211,153,0.3)]">
               SignalForge
             </span>
-          </div>
-          <div className="flex gap-4">
+          </Link>
+
+          <div className="flex items-center gap-4">
             <Link href="/login">
               <Button
                 variant="ghost"
-                className="text-slate-400 hover:text-white"
+                className="text-text-secondary hover:text-text-primary"
               >
                 Sign In
               </Button>
             </Link>
-            <Link href="/agent">
-              <Button className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                Launch Agent <ArrowRight className="ml-2 h-4 w-4" />
+            <Link href="/register">
+              <Button className="bg-surface-elevated text-text-primary hover:bg-border border border-border shadow-none">
+                Get Started
               </Button>
             </Link>
           </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="relative pt-32 pb-20 px-6">
-        <div className="max-w-4xl mx-auto text-center space-y-8">
-          <Badge
-            variant="outline"
-            className="border-emerald-500/30 text-emerald-400 bg-emerald-500/5 px-4 py-1.5 rounded-full text-sm"
-          >
-            v1.0 Public Beta • Powered by Gemini 2.5
-          </Badge>
-
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white">
-            Autonomous Market <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">
-              Research Agent
-            </span>
-          </h1>
-
-          <p className="text-xl text-slate-400 max-w-2xl mx-auto leading-relaxed">
-            SignalForge is an AI analyst that researches companies, analyzes
-            market sentiment, and generates investment-grade reports in seconds.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center pt-8">
-            <Link href="/agent">
-              <Button
-                size="lg"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white h-12 px-8 text-lg w-full sm:w-auto"
-              >
-                Start Researching
-              </Button>
-            </Link>
-            <Link
-              href="https://github.com/CaSh007s/signal-forge"
-              target="_blank"
+      <main className="flex-1">
+        {/* 2. HERO SECTION */}
+        <section className="relative pt-32 pb-20 px-6 overflow-hidden">
+          <div className="max-w-4xl mx-auto text-center space-y-8">
+            <motion.div
+              initial="hidden"
+              animate="visible"
+              variants={staggerContainer}
+              className="space-y-6"
             >
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-slate-700 text-slate-300 hover:bg-slate-800 hover:text-white h-12 px-8 text-lg w-full sm:w-auto"
+              <motion.div
+                variants={fadeInUp}
+                className="inline-flex items-center rounded-full border border-border bg-surface-elevated/50 px-3 py-1 text-sm text-text-secondary backdrop-blur-sm"
               >
-                View on GitHub
-              </Button>
-            </Link>
+                <span className="flex h-2 w-2 rounded-full bg-accent mr-2 animate-pulse"></span>
+                v1.0 Public Beta
+              </motion.div>
+
+              <motion.h1
+                variants={fadeInUp}
+                className="font-brand text-5xl md:text-7xl font-bold tracking-tight text-text-primary"
+              >
+                Quiet Intelligence for <br />
+                <span className="text-text-muted">Modern Markets.</span>
+              </motion.h1>
+
+              <motion.p
+                variants={fadeInUp}
+                className="text-xl text-text-secondary max-w-2xl mx-auto leading-relaxed"
+              >
+                Autonomous financial research agents that read, analyze, and
+                synthesize market data in seconds. No noise. Just signal.
+              </motion.p>
+
+              <motion.div
+                variants={fadeInUp}
+                className="pt-4 flex items-center justify-center gap-4"
+              >
+                <Link href="/register">
+                  <Button
+                    size="lg"
+                    className="h-12 px-8 text-base bg-accent text-[#09090b] hover:bg-accent-hover hover:shadow-[0_0_20px_rgba(52,211,153,0.3)] transition-all duration-300"
+                  >
+                    Start Researching
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+                <Link href="/login">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="h-12 px-8 text-base bg-transparent border-border text-text-secondary hover:text-text-primary"
+                  >
+                    View Demo
+                  </Button>
+                </Link>
+              </motion.div>
+            </motion.div>
           </div>
+
+          {/* Abstract Grid Background */}
+          <div className="absolute inset-0 -z-10 h-full w-full bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]"></div>
+        </section>
+
+        {/* 3. BENTO GRID FEATURES */}
+        <section className="py-24 px-6 border-t border-border/40 bg-surface/30">
+          <div className="max-w-6xl mx-auto">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="grid grid-cols-1 md:grid-cols-3 gap-6"
+            >
+              {/* Feature 1 */}
+              <div className="md:col-span-2 group relative overflow-hidden rounded-xl border border-border bg-surface p-8 hover:border-accent/30 transition-colors duration-300">
+                <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <BarChart3 className="h-32 w-32" />
+                </div>
+                <div className="relative z-10 space-y-4">
+                  <div className="h-10 w-10 rounded-lg bg-surface-elevated flex items-center justify-center border border-border">
+                    <Zap className="h-5 w-5 text-accent" />
+                  </div>
+                  <h3 className="text-xl font-bold font-brand text-text-primary">
+                    Real-time Analysis
+                  </h3>
+                  <p className="text-text-secondary max-w-md">
+                    Our agents connect directly to live market feeds, processing
+                    news, earnings reports, and sentiment analysis instantly.
+                  </p>
+                </div>
+              </div>
+
+              {/* Feature 2 */}
+              <div className="md:col-span-1 group relative overflow-hidden rounded-xl border border-border bg-surface p-8 hover:border-accent/30 transition-colors duration-300">
+                <div className="relative z-10 space-y-4">
+                  <div className="h-10 w-10 rounded-lg bg-surface-elevated flex items-center justify-center border border-border">
+                    <ShieldCheck className="h-5 w-5 text-accent" />
+                  </div>
+                  <h3 className="text-xl font-bold font-brand text-text-primary">
+                    Institutional Grade
+                  </h3>
+                  <p className="text-text-secondary">
+                    Security and data privacy first. Your research strategies
+                    remain yours.
+                  </p>
+                </div>
+              </div>
+
+              {/* Feature 3 */}
+              <div className="md:col-span-3 group relative overflow-hidden rounded-xl border border-border bg-surface p-8 hover:border-accent/30 transition-colors duration-300">
+                <div className="flex flex-col md:flex-row items-center gap-8">
+                  <div className="flex-1 space-y-4">
+                    <div className="h-10 w-10 rounded-lg bg-surface-elevated flex items-center justify-center border border-border">
+                      <Terminal className="h-5 w-5 text-accent" />
+                    </div>
+                    <h3 className="text-xl font-bold font-brand text-text-primary">
+                      Developer API
+                    </h3>
+                    <p className="text-text-secondary">
+                      Integrate SignalForge directly into your Python or Node.js
+                      workflows. Full JSON output support for automated trading
+                      bots.
+                    </p>
+                    <div className="pt-2">
+                      <span className="text-xs font-mono bg-surface-elevated px-2 py-1 rounded text-accent">
+                        pip install signalforge
+                      </span>
+                    </div>
+                  </div>
+                  {/* Mock Code Block */}
+                  <div className="flex-1 w-full bg-[#09090b] rounded-lg border border-border p-4 font-mono text-xs text-text-secondary shadow-2xl opacity-80">
+                    <div className="flex gap-1.5 mb-3">
+                      <div className="w-2.5 h-2.5 rounded-full bg-red-500/20"></div>
+                      <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/20"></div>
+                      <div className="w-2.5 h-2.5 rounded-full bg-green-500/20"></div>
+                    </div>
+                    <p>
+                      <span className="text-purple-400">from</span> signalforge{" "}
+                      <span className="text-purple-400">import</span> Agent
+                    </p>
+                    <p className="mt-2">
+                      agent = Agent(api_key=
+                      <span className="text-green-400">&quot;sf_...&quot;</span>
+                      )
+                    </p>
+                    <p>
+                      report = agent.analyze(
+                      <span className="text-green-400">&quot;AAPL&quot;</span>)
+                    </p>
+                    <p className="mt-2 text-text-muted">
+                      # Output: Bullish divergence detected...
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        </section>
+      </main>
+
+      {/* 4. FOOTER */}
+      <footer className="border-t border-border/40 bg-bg py-12 px-6">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+          <div className="flex items-center gap-2">
+            <div className="h-6 w-6 bg-accent/10 rounded flex items-center justify-center border border-accent/20">
+              <Terminal className="text-accent h-3 w-3" />
+            </div>
+            <span className="font-brand font-bold text-sm text-text-primary">
+              SignalForge
+            </span>
+          </div>
+          <p className="text-sm text-text-muted">
+            © 2026 SignalForge Inc. Built for the modern analyst.
+          </p>
         </div>
-
-        {/* Abstract Background Glow */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-[500px] bg-emerald-500/10 blur-[120px] -z-10 rounded-full opacity-50 pointer-events-none" />
-      </section>
-
-      {/* Feature Grid (Bento Style) */}
-      <section className="py-24 px-6 border-t border-slate-900 bg-slate-950/50">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl font-bold text-white mb-4">
-              Why SignalForge?
-            </h2>
-            <p className="text-slate-400">
-              Built for speed, accuracy, and depth.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Feature 1 */}
-            <div className="bg-slate-900/50 border border-slate-800 p-8 rounded-2xl hover:border-emerald-500/30 transition-colors">
-              <div className="h-12 w-12 bg-slate-800 rounded-lg flex items-center justify-center mb-6">
-                <Globe className="text-emerald-400 h-6 w-6" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-3">
-                Live Web Search
-              </h3>
-              <p className="text-slate-400 leading-relaxed">
-                The agent actively crawls the latest news and market data. No
-                outdated training data limits.
-              </p>
-            </div>
-
-            {/* Feature 2 */}
-            <div className="bg-slate-900/50 border border-slate-800 p-8 rounded-2xl hover:border-emerald-500/30 transition-colors">
-              <div className="h-12 w-12 bg-slate-800 rounded-lg flex items-center justify-center mb-6">
-                <Zap className="text-emerald-400 h-6 w-6" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-3">
-                Gemini 2.5 Flash
-              </h3>
-              <p className="text-slate-400 leading-relaxed">
-                Powered by Google&apos;s latest high-throughput model for
-                sub-second reasoning and synthesis.
-              </p>
-            </div>
-
-            {/* Feature 3 */}
-            <div className="bg-slate-900/50 border border-slate-800 p-8 rounded-2xl hover:border-emerald-500/30 transition-colors">
-              <div className="h-12 w-12 bg-slate-800 rounded-lg flex items-center justify-center mb-6">
-                <ShieldCheck className="text-emerald-400 h-6 w-6" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-3">
-                Transparent Logic
-              </h3>
-              <p className="text-slate-400 leading-relaxed">
-                Watch the agent think. View the &quot;Chain of Thought&quot;
-                logs as it researches and decides.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <footer className="py-12 border-t border-slate-900 text-center text-slate-500 text-sm">
-        <p>© 2026 SignalForge. Built by Kalash Pratap Gaur.</p>
       </footer>
     </div>
   );
