@@ -5,6 +5,8 @@ import {
   IBM_Plex_Sans,
 } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
+import { AuthModal } from "@/components/auth/auth-modal";
+import { AuthProvider } from "@/context/auth-context";
 import "./globals.css";
 
 // 1. BRAND FONT (Logo)
@@ -59,7 +61,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          {/* WRAPPER START */}
+          <AuthProvider>
+            <AuthModal />
+            {children}
+          </AuthProvider>
+          {/* WRAPPER END */}
         </ThemeProvider>
       </body>
     </html>

@@ -9,6 +9,7 @@ import {
   Zap,
   Terminal,
 } from "lucide-react";
+import { useAuth } from "@/context/auth-context";
 import { motion, Variants } from "framer-motion";
 
 // Motion Variants
@@ -30,6 +31,8 @@ const staggerContainer: Variants = {
 };
 
 export default function LandingPage() {
+  const { openAuth } = useAuth();
+
   return (
     <div className="min-h-screen flex flex-col font-sans selection:bg-accent/20">
       {/* 1. GLASS NAVBAR */}
@@ -45,19 +48,20 @@ export default function LandingPage() {
           </Link>
 
           <div className="flex items-center gap-4">
-            <Link href="/login">
-              <Button
-                variant="ghost"
-                className="text-text-secondary hover:text-text-primary"
-              >
-                Sign In
-              </Button>
-            </Link>
-            <Link href="/register">
-              <Button className="bg-surface-elevated text-text-primary hover:bg-border border border-border shadow-none">
-                Get Started
-              </Button>
-            </Link>
+            <Button
+              variant="ghost"
+              className="text-text-secondary hover:text-text-primary"
+              onClick={() => openAuth("login")}
+            >
+              Sign In
+            </Button>
+
+            <Button
+              className="bg-surface-elevated text-text-primary hover:bg-border border border-border shadow-none"
+              onClick={() => openAuth("signup")}
+            >
+              Get Started
+            </Button>
           </div>
         </div>
       </nav>
@@ -100,24 +104,25 @@ export default function LandingPage() {
                 variants={fadeInUp}
                 className="pt-4 flex items-center justify-center gap-4"
               >
-                <Link href="/register">
-                  <Button
-                    size="lg"
-                    className="h-12 px-8 text-base bg-accent text-[#09090b] hover:bg-accent-hover hover:shadow-[0_0_20px_rgba(52,211,153,0.3)] transition-all duration-300"
-                  >
-                    Start Researching
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                </Link>
-                <Link href="/login">
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="h-12 px-8 text-base bg-transparent border-border text-text-secondary hover:text-text-primary"
-                  >
-                    View Demo
-                  </Button>
-                </Link>
+                {/* CHANGED: Main CTA Trigger */}
+                <Button
+                  size="lg"
+                  className="h-12 px-8 text-base bg-accent text-[#09090b] hover:bg-accent-hover hover:shadow-[0_0_20px_rgba(52,211,153,0.3)] transition-all duration-300"
+                  onClick={() => openAuth("signup")}
+                >
+                  Start Researching
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+
+                {/* View Demo (Can stay as is or trigger login) */}
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="h-12 px-8 text-base bg-transparent border-border text-text-secondary hover:text-text-primary"
+                  onClick={() => openAuth("login")}
+                >
+                  View Demo
+                </Button>
               </motion.div>
             </motion.div>
           </div>

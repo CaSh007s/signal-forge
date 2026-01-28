@@ -33,7 +33,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <ProtectedRoute>
       <div className="flex h-screen bg-background overflow-hidden">
         {/* SIDEBAR */}
-        <aside className="w-64 border-r border-border bg-card/30 flex flex-col hidden md:flex">
+        <aside className="w-64 border-r border-border bg-surface-elevated flex flex-col hidden md:flex">
           {/* Logo Area */}
           <div className="h-16 flex items-center px-6 border-b border-border/50">
             <div className="flex items-center gap-2 font-bold text-lg tracking-tight">

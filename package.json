@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@radix-ui/react-label": "^2.1.8",
     "clsx": "^2.1.1",
     "framer-motion": "^12.29.2",
     "tailwind-merge": "^3.4.0"
