@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { saveReport } from "@/lib/api";
 
 export type AgentStep = {
   type: "log" | "result" | "error";
@@ -14,54 +15,59 @@ export function useAgent() {
     setMessages([]);
     setReport("");
     setIsStreaming(true);
+    let fullReport = "";
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/generate", {
+      const token = localStorage.getItem("signalforge_token");
+      const response = await fetch("http://127.0.0.1:8000/api/agent/research", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ company }),
       });
 
-      if (!response.ok) throw new Error("Failed to start agent");
-      if (!response.body) throw new Error("ReadableStream not supported");
+      if (!response.body) return;
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
 
       while (true) {
-        const { done, value } = await reader.read();
+        const { value, done } = await reader.read();
         if (done) break;
 
-        // Decode the stream chunk
         const chunk = decoder.decode(value);
-
-        // Parse SSE format (data: {...})
-        // Chunks might contain multiple lines or be split
         const lines = chunk.split("\n\n");
 
         for (const line of lines) {
           if (line.startsWith("data: ")) {
-            try {
-              const jsonStr = line.replace("data: ", "").trim();
-              if (!jsonStr) continue;
+            const data = JSON.parse(line.slice(6));
 
-              const data: AgentStep = JSON.parse(jsonStr);
-
-              if (data.type === "log") {
-                setMessages((prev) => [...prev, data.content]);
-              } else if (data.type === "result") {
-                setReport((prev) => prev + data.content);
-                setReport(data.content);
-              }
-            } catch (e) {
-              console.error("Error parsing stream chunk", e);
+            if (data.type === "log") {
+              setMessages((prev) => [...prev, data.content]);
+            } else if (data.type === "chunk") {
+              setReport((prev) => prev + data.content);
+              fullReport += data.content; // Accumulate for saving
+            } else if (data.type === "error") {
+              setMessages((prev) => [...prev, `Error: ${data.content}`]);
             }
           }
         }
       }
+
+      // Autosave
+      if (fullReport.length > 0) {
+        console.log("Agent finished. Saving report...");
+        await saveReport(company, fullReport);
+        console.log("Report saved to history.");
+      }
     } catch (error) {
-      console.error("Agent Error:", error);
-      setMessages((prev) => [...prev, `❌ Error: ${error}`]);
+      console.error("Stream error:", error);
+      setMessages((prev) => [
+        ...prev,
+        "System Error: Failed to connect to agent.",
+      ]);
     } finally {
       setIsStreaming(false);
     }

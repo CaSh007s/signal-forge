@@ -24,7 +24,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (isAuthenticated()) {
-      router.push("/agent");
+      router.push("/dashboard");
     }
   }, [router]);
 
@@ -50,7 +50,7 @@ export default function LoginPage() {
 
       const data = await res.json();
       setToken(data.access_token);
-      router.push("/agent");
+      router.push("/dashboard");
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);

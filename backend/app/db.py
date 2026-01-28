@@ -4,19 +4,27 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, declarative_base
 from dotenv import load_dotenv
 
-# 1. Force-load the .env file from the backend root directory
+# 1. Load Environment
 BASE_DIR = Path(__file__).resolve().parent.parent
 env_path = BASE_DIR / ".env"
 load_dotenv(dotenv_path=env_path)
 
-# 2. Get the URL
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not SQLALCHEMY_DATABASE_URL:
-    raise ValueError(f"❌ DATABASE_URL is missing! I looked for it here: {env_path}")
+    raise ValueError(f"❌ DATABASE_URL is missing! Checked: {env_path}")
 
-# 3. Create Engine (Supabase/Postgres)
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+# 2. Smart Connection Arguments
+connect_args = {}
+if "sqlite" in SQLALCHEMY_DATABASE_URL:
+    # SQLite specific argument to allow multi-threaded access
+    connect_args = {"check_same_thread": False}
+
+# 3. Create Engine (Works for BOTH SQLite and Supabase now)
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, 
+    connect_args=connect_args
+)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 

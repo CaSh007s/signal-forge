@@ -19,7 +19,7 @@ export default function RegisterPage() {
   const router = useRouter();
   useEffect(() => {
     if (isAuthenticated()) {
-      router.push("/agent");
+      router.push("/dashboard");
     }
   }, [router]);
   const [email, setEmail] = useState("");
