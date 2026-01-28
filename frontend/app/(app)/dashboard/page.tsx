@@ -62,11 +62,6 @@ export default function DashboardPage() {
     fetchReports();
   }, [router]);
 
-  const handleLogout = () => {
-    removeToken();
-    router.push("/login");
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -77,29 +72,6 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-background text-foreground font-sans selection:bg-primary/20">
-      {/* Navigation Bar */}
-      <nav className="border-b border-border bg-card/50 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="h-8 w-8 bg-primary/10 rounded-lg flex items-center justify-center border border-primary/20">
-              <TrendingUp className="text-primary h-5 w-5" />
-            </div>
-            <span className="font-bold text-lg tracking-tight">
-              SignalForge
-            </span>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleLogout}
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            Sign Out
-          </Button>
-        </div>
-      </nav>
-
       <main className="max-w-5xl mx-auto px-6 py-12 space-y-8">
         {/* Hero / Welcome */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
