@@ -1,38 +1,39 @@
-import json
-from fastapi import APIRouter, Depends
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
-from fastapi_limiter.depends import RateLimiter
-from app.agent.graph import app_graph
+from app.agent.graph import app as agent_app
+from app.services.finance import get_stock_history
+from app import schemas
 
 router = APIRouter()
 
-class ReportRequest(BaseModel):
-    company: str
-    ticker: str = None
+class QueryRequest(BaseModel):
+    query: str
 
-async def event_generator(company: str, ticker: str = None):
-    """
-    Generator that yields SSE events.
-    """
-    inputs = {"company": company, "ticker": ticker or company}
-    
+# We define a new response model that includes chart data
+class AnalysisResponse(BaseModel):
+    company_name: str
+    report_content: str
+    chart_data: dict | None = None
+
+@router.post("/analyze", response_model=AnalysisResponse)
+async def analyze_company(request: QueryRequest):
     try:
-        async for output in app_graph.astream(inputs):
-            for key, value in output.items():
-                if "messages" in value:
-                    for msg in value["messages"]:
-                        yield f"data: {json.dumps({'type': 'log', 'content': msg})}\n\n"
-                
-                if "report" in value:
-                    yield f"data: {json.dumps({'type': 'result', 'content': value['report']})}\n\n"
-                    
-    except Exception as e:
-        yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"
+        # 1. Run the Agent
+        initial_state = {"messages": [("user", request.query)]}
+        result = await agent_app.ainvoke(initial_state)
+        
+        # Extract the final response from the agent
+        final_message = result["messages"][-1].content
+        
+        # 2. Fetch Market Data (The "Visual" part)
+        chart_data = get_stock_history(request.query)
 
-@router.post("/generate", dependencies=[Depends(RateLimiter(times=3, seconds=60))])
-async def generate_report(request: ReportRequest):
-    return StreamingResponse(
-        event_generator(request.company, request.ticker),
-        media_type="text/event-stream"
-    )
+        return {
+            "company_name": request.query.upper(),
+            "report_content": final_message,
+            "chart_data": chart_data
+        }
+
+    except Exception as e:
+        print(f"Error in analysis: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

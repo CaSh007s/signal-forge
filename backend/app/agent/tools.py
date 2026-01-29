@@ -2,32 +2,31 @@ import os
 import warnings
 import yfinance as yf
 from dotenv import load_dotenv
+from langchain_core.tools import tool
 
 # 1. Force load environment variables immediately
 load_dotenv()
 
-# 2. Suppress the specific LangChain deprecation warning to keep logs clean
+# 2. Suppress the specific LangChain deprecation warning
 warnings.filterwarnings("ignore", category=UserWarning, module="langchain")
 
 # 3. Use the community import
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_community.tools import DuckDuckGoSearchRun
 
-# Verify key exists
-if not os.getenv("TAVILY_API_KEY"):
-    print("⚠️ WARNING: TAVILY_API_KEY not found. Search will fail.")
-
 # Initialize Search Tools
 tavily_tool = TavilySearchResults(max_results=3)
 ddg_tool = DuckDuckGoSearchRun()
 
-def fetch_stock_data(company_symbol: str):
+@tool
+def fetch_stock_data(ticker: str):
     """
     Fetches historical stock data and current info using yfinance.
+    Input should be a stock ticker symbol (e.g., AAPL, TSLA).
     """
     try:
-        ticker = yf.Ticker(company_symbol)
-        hist = ticker.history(period="1mo")
+        stock = yf.Ticker(ticker)
+        hist = stock.history(period="1mo")
         
         if hist.empty:
             return {"error": "No stock data found"}
@@ -40,20 +39,19 @@ def fetch_stock_data(company_symbol: str):
             "current_price": round(end_price, 2),
             "start_price_1mo": round(start_price, 2),
             "growth_1mo_percent": round(growth, 2),
-            "currency": ticker.info.get("currency", "USD")
+            "currency": stock.info.get("currency", "USD")
         }
     except Exception as e:
         return {"error": str(e)}
 
-def search_market_news(company_name: str):
+@tool
+def search_market_news(query: str):
     """
-    Searches for recent market news about the company.
+    Searches for recent market news about a company or topic.
     """
-    query = f"{company_name} stock market news analysis finance"
-    
     try:
+        # Use Tavily for high-quality news
         results = tavily_tool.invoke({"query": query})
-        # Handle the list of dicts return format from the community tool
         content = ""
         if isinstance(results, list):
             content = "\n".join([r.get("content", "") for r in results])
@@ -63,3 +61,6 @@ def search_market_news(company_name: str):
     except Exception as e:
         print(f"Tavily error: {e}. Fallback to DuckDuckGo...")
         return ddg_tool.invoke(query)
+
+# Export the list of tools for the graph
+tools = [fetch_stock_data, search_market_news]

@@ -7,7 +7,6 @@ import remarkGfm from "remark-gfm";
 import {
   ArrowRight,
   Terminal,
-  Loader2,
   Copy,
   Check,
   Download,
@@ -16,6 +15,20 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { getToken } from "@/lib/auth";
+import { StockChart } from "@/components/stock-chart";
+
+// FIX: Define the shape of the data
+interface ChartData {
+  symbol: string;
+  currency: string;
+  history: { date: string; price: number }[];
+}
+
+interface ReportState {
+  title: string;
+  content: string;
+  chartData?: ChartData; // FIX: Use the interface here
+}
 
 export default function AgentPage() {
   const searchParams = useSearchParams();
@@ -24,19 +37,16 @@ export default function AgentPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
-  const [report, setReport] = useState<{
-    title: string;
-    content: string;
-  } | null>(null);
+
+  // FIX: Use the new ReportState type
+  const [report, setReport] = useState<ReportState | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Auto-scroll for logs
   const logsEndRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
-  // Load existing report if ID is present
   useEffect(() => {
     if (reportId) {
       fetchReport(reportId);
@@ -52,7 +62,11 @@ export default function AgentPage() {
       });
       if (res.ok) {
         const data = await res.json();
-        setReport({ title: data.company_name, content: data.report_content });
+        setReport({
+          title: data.company_name,
+          content: data.report_content,
+          // Note: Saved reports might not load chart data from DB yet
+        });
       }
     } catch (error) {
       console.error(error);
@@ -72,8 +86,6 @@ export default function AgentPage() {
 
     const token = getToken();
 
-    // Simulate streaming logs (Since backend doesn't stream yet)
-    // We will upgrade this to real WebSocket streaming later
     const logInterval = setInterval(() => {
       setLogs((prev) => [
         ...prev,
@@ -97,7 +109,11 @@ export default function AgentPage() {
 
       if (res.ok) {
         const data = await res.json();
-        setReport({ title: data.company_name, content: data.report_content });
+        setReport({
+          title: data.company_name,
+          content: data.report_content,
+          chartData: data.chart_data, // This now matches the interface
+        });
       } else {
         setLogs((prev) => [...prev, "❌ Error: Analysis failed."]);
       }
@@ -118,7 +134,7 @@ export default function AgentPage() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 pb-20">
-      {/* 1. INPUT AREA (Only visible if no report) */}
+      {/* 1. INPUT AREA */}
       {!report && !loading && (
         <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-8 text-center animate-fade-in">
           <div className="space-y-4">
@@ -129,14 +145,15 @@ export default function AgentPage() {
               Market Intelligence Agent
             </h1>
             <p className="text-zinc-400 max-w-lg mx-auto text-lg">
-              Enter a company name or ticker. The agent will autonomously gather
-              data, analyze sentiment, and generate a briefing.
+              Enter a stock ticker (e.g., AAPL, TSLA, NVDA). The agent will
+              autonomously gather data, analyze sentiment, and generate a
+              briefing.
             </p>
           </div>
 
           <div className="flex w-full max-w-md items-center space-x-2">
             <Input
-              placeholder="e.g. Apple, TSLA, Nvidia..."
+              placeholder="e.g. AAPL, TSLA..."
               className="h-14 text-lg bg-zinc-900 border-zinc-700 focus-visible:ring-emerald-500/50"
               value={input}
               onChange={(e) => setInput(e.target.value)}
@@ -153,7 +170,7 @@ export default function AgentPage() {
         </div>
       )}
 
-      {/* 2. LOADING STATE (The Terminal) */}
+      {/* 2. LOADING STATE */}
       {loading && (
         <div className="max-w-2xl mx-auto mt-20">
           <div className="bg-zinc-950 rounded-lg border border-zinc-800 overflow-hidden shadow-2xl font-mono text-sm">
@@ -190,7 +207,7 @@ export default function AgentPage() {
         </div>
       )}
 
-      {/* 3. THE EDITORIAL REPORT VIEW */}
+      {/* 3. THE REPORT VIEW */}
       {report && !loading && (
         <div className="animate-slide-up space-y-6">
           {/* STICKY HEADER */}
@@ -234,6 +251,16 @@ export default function AgentPage() {
               </Button>
             </div>
           </div>
+
+          {/* STOCK CHART SECTION */}
+          {report.chartData && report.chartData.history && (
+            <div className="mt-6">
+              <StockChart
+                data={report.chartData.history}
+                currency={report.chartData.currency}
+              />
+            </div>
+          )}
 
           {/* MARKDOWN CONTENT */}
           <div
