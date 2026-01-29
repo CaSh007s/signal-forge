@@ -1,7 +1,7 @@
-from sqlalchemy import Column, Integer, String, ForeignKey, Text, DateTime
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
-from app.db import Base
+from app.db import Base 
+import datetime
 
 class User(Base):
     __tablename__ = "users"
@@ -10,7 +10,6 @@ class User(Base):
     email = Column(String, unique=True, index=True)
     hashed_password = Column(String)
     
-    # Relationship: One User - Many Reports
     reports = relationship("Report", back_populates="owner")
 
 class Report(Base):
@@ -18,11 +17,9 @@ class Report(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     company_name = Column(String, index=True)
-    report_content = Column(Text) # The Markdown output
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    report_content = Column(Text)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
-    # Foreign Key: Links to User.id
-    user_id = Column(Integer, ForeignKey("users.id"))
-    
-    # Relationship: Many Reports - One User
+    # Foreign Key to link report to a user
+    owner_id = Column(Integer, ForeignKey("users.id"))
     owner = relationship("User", back_populates="reports")

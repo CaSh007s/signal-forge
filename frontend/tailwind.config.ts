@@ -3,7 +3,6 @@ import tailwindAnimate from "tailwindcss-animate";
 import typography from "@tailwindcss/typography";
 
 const config: Config = {
-  // Fix 1: Use string "class" instead of array ["class"]
   darkMode: "class",
 
   content: [
@@ -21,7 +20,7 @@ const config: Config = {
       },
     },
     extend: {
-      // 1. Mapped Colors (Your Design System)
+      // 1. Mapped Colors
       colors: {
         bg: "hsl(var(--bg))",
         surface: "hsl(var(--surface))",
@@ -74,7 +73,6 @@ const config: Config = {
       },
     },
   },
-  // Fix 2: Use imported plugins instead of require()
   plugins: [tailwindAnimate, typography],
 };
 

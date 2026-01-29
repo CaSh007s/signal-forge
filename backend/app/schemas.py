@@ -1,16 +1,15 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from datetime import datetime
-from typing import List, Optional
+from typing import Optional
 
-# User Schemas
-class UserBase(BaseModel):
-    email: EmailStr
-
-class UserCreate(UserBase):
+# --- User Schemas ---
+class UserCreate(BaseModel):
+    email: str
     password: str
 
-class User(UserBase):
+class UserResponse(BaseModel):
     id: int
+    email: str
     class Config:
         from_attributes = True
 
@@ -18,7 +17,10 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
-# Report Schemas
+class TokenData(BaseModel):
+    email: Optional[str] = None
+
+# --- Report Schemas ---
 class ReportBase(BaseModel):
     company_name: str
     report_content: str
@@ -26,14 +28,9 @@ class ReportBase(BaseModel):
 class ReportCreate(ReportBase):
     pass
 
-class Report(ReportBase):
+class ReportResponse(ReportBase):
     id: int
     created_at: datetime
-    user_id: int
-
+    owner_id: int 
     class Config:
         from_attributes = True
-
-# Update User to include reports
-class UserWithReports(User):
-    reports: List[Report] = []
