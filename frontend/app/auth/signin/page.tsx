@@ -20,10 +20,11 @@ export default function SignInPage() {
 
     // Simulate Auth Delay
     setTimeout(() => {
+      localStorage.setItem("token", "demo-access-token");
       setLoading(false);
       setSuccess(true);
       setTimeout(() => {
-        router.push("/agent");
+        router.push("/dashboard");
       }, 1500);
     }, 1500);
   };

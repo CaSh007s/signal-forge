@@ -23,10 +23,11 @@ export default function SignUpPage() {
     setLoading(true);
 
     setTimeout(() => {
+      localStorage.setItem("token", "demo-access-token");
       setLoading(false);
       setSuccess(true);
       setTimeout(() => {
-        router.push("/agent");
+        router.push("/dashboard");
       }, 2000);
     }, 2000);
   };
