@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion, Variants } from "framer-motion"; // Added Variants type
+import { motion, Variants, AnimatePresence } from "framer-motion";
 import { LayoutDashboard, Radio, Pin, PinOff } from "lucide-react";
 import { useState } from "react";
 import { useSidebar } from "@/context/sidebar-context";
@@ -12,7 +12,6 @@ const menuItems = [
   { name: "Research Agent", icon: Radio, href: "/agent" },
 ];
 
-// ✅ FIX: Explicitly type the variants to satisfy TypeScript
 const itemVariants: Variants = {
   hidden: { opacity: 0, x: -10, filter: "blur(5px)" },
   visible: {
@@ -32,7 +31,36 @@ export function LatentSidebar() {
 
   return (
     <>
-      {/* 1. TRIGGER ZONE (Only active when NOT pinned) */}
+      {/* 1. THE GLASS SEAMS */}
+      <AnimatePresence>
+        {!isVisible && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{
+              opacity: [0.2, 0.6, 0.2],
+              scale: 1,
+            }}
+            exit={{
+              opacity: 0,
+              scale: 0.95,
+              transition: { duration: 0.5, ease: "easeOut" },
+            }}
+            transition={{
+              // Slower breathing cycle for a calmer feel
+              opacity: { duration: 6, repeat: Infinity, ease: "easeInOut" },
+            }}
+            className="fixed left-2 top-1/2 -translate-y-1/2 z-40 pointer-events-none flex gap-[3px]"
+          >
+            {/* Primary Edge with Emerald Glow */}
+            <div className="w-[1px] h-14 bg-white/40 shadow-[0_0_30px_rgba(16,185,129,0.6)] rounded-full backdrop-blur-md" />
+
+            {/* Secondary, subtler edge for depth */}
+            <div className="w-[1px] h-14 bg-white/20 shadow-[0_0_20px_rgba(16,185,129,0.3)] rounded-full backdrop-blur-md" />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* 2. TRIGGER ZONE */}
       {!isPinned && (
         <div
           onMouseEnter={() => setIsHovered(true)}
@@ -40,7 +68,7 @@ export function LatentSidebar() {
         />
       )}
 
-      {/* 2. THE GLASS PANEL */}
+      {/* 3. THE LATENT PANEL */}
       <motion.div
         initial={false}
         animate={{
@@ -87,7 +115,7 @@ export function LatentSidebar() {
               </button>
             </motion.div>
 
-            {/* NAVIGATION ITEMS */}
+            {/* NAV ITEMS */}
             <div className="space-y-2">
               {menuItems.map((item) => {
                 const isActive = pathname === item.href;
@@ -121,6 +149,7 @@ export function LatentSidebar() {
             </div>
           </motion.div>
 
+          {/* SYSTEM STATUS */}
           <motion.div
             variants={itemVariants}
             className="mt-auto pt-6 border-t border-white/5"
