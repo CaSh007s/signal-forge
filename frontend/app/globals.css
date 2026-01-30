@@ -1,80 +1,55 @@
 @import "tailwindcss";
-@import "tw-animate-css";
-@tailwind utilities;
+
+@plugin "tailwindcss-animate";
+@plugin "@tailwindcss/typography";
 
 @layer base {
   :root {
-    --bg: 0 0% 98%; /* #fafafa (Zinc-50) */
-    --surface: 0 0% 100%; /* #ffffff */
-    --surface-elevated: 240 5% 96%; /* #f4f4f5 (Zinc-100) */
-    --border: 240 6% 90%; /* #e4e4e7 (Zinc-200) */
+    --bg: 0 0% 98%; /* Zinc-50 */
+    --surface: 0 0% 100%; /* White */
+    --surface-elevated: 240 5% 96%; /* Zinc-100 */
+    --border: 240 5.9% 90%; /* Zinc-200 */
 
-    --text-primary: 240 10% 4%; /* #18181b (Zinc-900) */
-    --text-secondary: 240 4% 46%; /* #52525b (Zinc-600) */
-    --text-muted: 240 5% 65%; /* #71717a (Zinc-500) */
+    --text-primary: 240 10% 3.9%; /* Zinc-950 */
+    --text-secondary: 240 3.8% 46.1%; /* Zinc-500 */
+    --text-muted: 240 5% 64.9%; /* Zinc-400 */
 
-    --accent: 158 82% 39%; /* #10b981 (Emerald-500) */
-    --accent-hover: 158 64% 52%; /* #34d399 (Emerald-400) */
+    --accent: 142.1 76.2% 36.3%; /* Emerald-600 */
+    --accent-hover: 142.1 70.6% 45.3%; /* Emerald-500 */
 
     --radius: 0.75rem;
   }
 
   .dark {
-    --bg: 240 10% 4%; /* #09090b (Zinc-950) */
-    --surface: 240 6% 10%; /* #18181b (Zinc-900) */
-    --surface-elevated: 240 5% 16%; /* #27272a (Zinc-800) */
-    --border: 240 5% 16%; /* #27272a */
+    --bg: 240 10% 3.9%; /* Zinc-950 */
+    --surface: 240 5.9% 10%; /* Zinc-900 */
+    --surface-elevated: 240 3.7% 15.9%; /* Zinc-800 */
+    --border: 240 3.7% 15.9%; /* Zinc-800 */
 
-    --text-primary: 240 5% 96%; /* #f4f4f5 (Zinc-100) */
-    --text-secondary: 240 5% 65%; /* #a1a1aa (Zinc-400) */
-    --text-muted: 240 5% 46%; /* #71717a (Zinc-500) */
+    --text-primary: 0 0% 98%; /* White */
+    --text-secondary: 240 5% 64.9%; /* Zinc-400 */
+    --text-muted: 240 3.7% 15.9%; /* Zinc-800 */
 
-    --accent: 158 64% 52%; /* #34d399 (Emerald-400) */
-    --accent-hover: 152 76% 67%; /* #6ee7b7 (Emerald-300) */
+    --accent: 142.1 70.6% 45.3%; /* Emerald-500 */
+    --accent-hover: 142.4 71.8% 29.2%; /* Emerald-600 */
   }
 }
 
 @layer base {
   * {
+    /* ✅ FIX: Use native CSS to stop the 'unknown utility class' crash */
     border-color: hsl(var(--border));
   }
-
   body {
     background-color: hsl(var(--bg));
     color: hsl(var(--text-primary));
-    transition-property:
-      color, background-color, border-color, text-decoration-color, fill, stroke;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 300ms;
-  }
-
-  /* Noise Overlay */
-  body::before {
-    content: "";
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 50;
-    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.03'/%3E%3C/svg%3E");
-    opacity: 0.4;
-    mix-blend-mode: overlay;
   }
 }
 
-/* Custom Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background-color: hsl(var(--surface-elevated));
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background-color: hsl(var(--border));
+/* Print Overrides: Ensure PDF sees clean white background */
+@media print {
+  body {
+    background: white;
+    color: black;
+  }
 }

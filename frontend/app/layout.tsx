@@ -1,72 +1,55 @@
+import type { Metadata } from "next";
 import {
-  Space_Grotesk,
   Inter,
+  Space_Grotesk,
   JetBrains_Mono,
   IBM_Plex_Sans,
 } from "next/font/google";
-import { ThemeProvider } from "@/components/theme-provider";
-import { AuthModal } from "@/components/auth/auth-modal";
-import { AuthProvider } from "@/context/auth-context";
 import "./globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
+import { AuthProvider } from "@/context/auth-context";
+import { AuthModal } from "@/components/auth/auth-modal";
 
-// 1. BRAND FONT (Logo)
+const inter = Inter({ subsets: ["latin"], variable: "--font-ui" });
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
   variable: "--font-brand",
 });
-
-// 2. UI FONT (Default)
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-ui",
-});
-
-// 3. LOGS FONT (Terminal)
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
 });
-
-// 4. REPORT FONT (Reading)
 const ibmPlexSans = IBM_Plex_Sans({
   weight: ["400", "500", "600"],
   subsets: ["latin"],
   variable: "--font-report",
 });
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "SignalForge",
-  description: "Autonomous Market Research Agent",
+  description: "Autonomous financial research agents",
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="dark" suppressHydrationWarning>
       <body
-        className={`
-        ${inter.variable} 
-        ${spaceGrotesk.variable} 
-        ${jetbrainsMono.variable} 
-        ${ibmPlexSans.variable} 
-        font-sans antialiased bg-bg text-text-primary
-      `}
+        className={`${inter.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable} ${ibmPlexSans.variable} font-sans bg-bg text-text-primary antialiased`}
       >
         <ThemeProvider
-          attribute="data-theme"
+          attribute="class"
           defaultTheme="dark"
-          enableSystem
+          enableSystem={false}
           disableTransitionOnChange
         >
-          {/* WRAPPER START */}
           <AuthProvider>
             <AuthModal />
             {children}
           </AuthProvider>
-          {/* WRAPPER END */}
         </ThemeProvider>
       </body>
     </html>

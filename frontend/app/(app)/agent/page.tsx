@@ -11,13 +11,15 @@ import {
   Check,
   Download,
   TrendingUp,
+  Loader2,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { getToken } from "@/lib/auth";
 import { StockChart } from "@/components/stock-chart";
+import { toPng } from "html-to-image";
+import { jsPDF } from "jspdf";
 
-// FIX: Define the shape of the data
 interface ChartData {
   symbol: string;
   currency: string;
@@ -27,7 +29,7 @@ interface ChartData {
 interface ReportState {
   title: string;
   content: string;
-  chartData?: ChartData; // FIX: Use the interface here
+  chartData?: ChartData;
 }
 
 export default function AgentPage() {
@@ -37,10 +39,9 @@ export default function AgentPage() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
-
-  // FIX: Use the new ReportState type
   const [report, setReport] = useState<ReportState | null>(null);
   const [copied, setCopied] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   const logsEndRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -65,7 +66,6 @@ export default function AgentPage() {
         setReport({
           title: data.company_name,
           content: data.report_content,
-          // Note: Saved reports might not load chart data from DB yet
         });
       }
     } catch (error) {
@@ -112,7 +112,7 @@ export default function AgentPage() {
         setReport({
           title: data.company_name,
           content: data.report_content,
-          chartData: data.chart_data, // This now matches the interface
+          chartData: data.chart_data,
         });
       } else {
         setLogs((prev) => [...prev, "❌ Error: Analysis failed."]);
@@ -130,6 +130,40 @@ export default function AgentPage() {
     navigator.clipboard.writeText(report.content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!report) return;
+
+    const element = document.getElementById("report-content");
+    if (!element) return;
+
+    setDownloading(true);
+
+    try {
+      // 1. Capture the element as a high-res PNG
+      const dataUrl = await toPng(element, { quality: 0.95, pixelRatio: 2 });
+
+      // 2. Initialize PDF
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      // 3. Calculate dimensions to fit A4 page
+      const imgProps = pdf.getImageProperties(dataUrl);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      // 4. Add image and save
+      pdf.addImage(dataUrl, "PNG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`${report.title}_SignalForge_Report.pdf`);
+    } catch (error) {
+      console.error("PDF generation failed:", error);
+    } finally {
+      setDownloading(false);
+    }
   };
 
   return (
@@ -244,37 +278,45 @@ export default function AgentPage() {
                 variant="outline"
                 size="sm"
                 className="bg-zinc-900 border-zinc-700 text-zinc-300 hover:text-white"
-                disabled
+                onClick={handleDownloadPDF}
+                disabled={downloading}
               >
-                <Download className="h-4 w-4 mr-2" />
-                PDF (Soon)
+                {downloading ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Download className="h-4 w-4 mr-2" />
+                )}
+                PDF
               </Button>
             </div>
           </div>
 
-          {/* STOCK CHART SECTION */}
-          {report.chartData && report.chartData.history && (
-            <div className="mt-6">
-              <StockChart
-                data={report.chartData.history}
-                currency={report.chartData.currency}
-              />
-            </div>
-          )}
+          {/* REPORT CONTENT WRAPPER (ID for PDF Generation) */}
+          <div id="report-content" className="bg-bg p-4 rounded-xl">
+            {/* STOCK CHART SECTION */}
+            {report.chartData && report.chartData.history && (
+              <div className="mt-6 mb-8">
+                <StockChart
+                  data={report.chartData.history}
+                  currency={report.chartData.currency}
+                />
+              </div>
+            )}
 
-          {/* MARKDOWN CONTENT */}
-          <div
-            className="prose prose-invert prose-emerald max-w-none 
-            prose-headings:font-bold prose-h1:text-3xl prose-h2:text-2xl prose-h2:mt-8 prose-h2:mb-4 prose-h2:pb-2 prose-h2:border-b prose-h2:border-zinc-800
-            prose-p:text-zinc-300 prose-p:leading-relaxed prose-p:text-lg
-            prose-strong:text-white prose-strong:font-semibold
-            prose-ul:my-6 prose-li:my-2
-            prose-blockquote:border-l-4 prose-blockquote:border-emerald-500 prose-blockquote:bg-zinc-900/50 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r
-          "
-          >
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-              {report.content}
-            </ReactMarkdown>
+            {/* MARKDOWN CONTENT */}
+            <div
+              className="prose prose-invert prose-emerald max-w-none 
+              prose-headings:font-bold prose-h1:text-3xl prose-h2:text-2xl prose-h2:mt-8 prose-h2:mb-4 prose-h2:pb-2 prose-h2:border-b prose-h2:border-zinc-800
+              prose-p:text-zinc-300 prose-p:leading-relaxed prose-p:text-lg
+              prose-strong:text-white prose-strong:font-semibold
+              prose-ul:my-6 prose-li:my-2
+              prose-blockquote:border-l-4 prose-blockquote:border-emerald-500 prose-blockquote:bg-zinc-900/50 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r
+            "
+            >
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {report.content}
+              </ReactMarkdown>
+            </div>
           </div>
         </div>
       )}
