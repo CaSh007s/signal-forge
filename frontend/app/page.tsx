@@ -67,7 +67,7 @@ export default function LandingPage() {
       className="relative min-h-[400vh] bg-[#050505] text-white selection:bg-emerald-500/30 overflow-hidden font-sans perspective-1000"
       onMouseMove={handleMouseMove}
     >
-      {/* 1. THE DEEP GRAPHITE FIELD (Infinite Grid) */}
+      {/* 1. THE DEEP GRAPHITE FIELD */}
       <motion.div
         style={{ y: yBackground }}
         className="fixed inset-0 z-0 pointer-events-none"
@@ -83,14 +83,14 @@ export default function LandingPage() {
         />
       </motion.div>
 
-      {/* 2. AMBIENT DATA STREAMS (Shooting Stars) */}
+      {/* 2. AMBIENT DATA STREAMS */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <DataStream top="20%" duration={15} delay={0} />
         <DataStream top="60%" duration={20} delay={5} />
         <DataStream top="85%" duration={12} delay={2} />
       </div>
 
-      {/* 3. HERO SECTION: THE LIVING SYSTEM */}
+      {/* 3. HERO SECTION */}
       <div className="h-screen flex flex-col items-center justify-center relative z-10 sticky top-0 perspective-1000">
         <motion.div
           style={{ rotateX, rotateY, opacity: opacityHero, scale: scaleHero }}

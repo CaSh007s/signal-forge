@@ -8,7 +8,6 @@ import {
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { AuthProvider } from "@/context/auth-context";
-import { AuthModal } from "@/components/auth/auth-modal";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-ui" });
 const spaceGrotesk = Space_Grotesk({
@@ -46,10 +45,7 @@ export default function RootLayout({
           enableSystem={false}
           disableTransitionOnChange
         >
-          <AuthProvider>
-            <AuthModal />
-            {children}
-          </AuthProvider>
+          <AuthProvider>{children}</AuthProvider>
         </ThemeProvider>
       </body>
     </html>
