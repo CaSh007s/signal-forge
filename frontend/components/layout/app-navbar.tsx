@@ -6,6 +6,7 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { User, LogOut, Settings, ChevronDown } from "lucide-react";
 import { useSidebar } from "@/context/sidebar-context";
+import { supabase } from "@/lib/supabase"; // Import Supabase for real logout
 
 export function AppNavbar() {
   const router = useRouter();
@@ -27,42 +28,44 @@ export function AppNavbar() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const handleLogout = () => {
+  // ✅ FIX: Real Logout + Redirect to Landing Page
+  const handleLogout = async () => {
+    // 1. Kill the Supabase session
+    await supabase.auth.signOut();
+
+    // 2. Clear any leftover local state
     localStorage.removeItem("token");
-    router.push("/auth/signin");
+
+    // 3. Return to the Public World (Landing Page)
+    router.push("/");
   };
 
   return (
-    // SPATIAL CONTAINER: Moves when sidebar expands
     <div
       className="fixed top-0 right-0 z-40 h-16 flex items-center justify-between px-6 md:px-8 border-b border-white/5 bg-[#09090b]/80 backdrop-blur-md transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]"
       style={{
-        left: isExpanded ? "280px" : "0px", // The Glide
-        width: isExpanded ? "calc(100% - 280px)" : "100%", // The Compression
+        left: isExpanded ? "280px" : "0px",
+        width: isExpanded ? "calc(100% - 280px)" : "100%",
       }}
     >
       {/* LEFT: ENGINEERED WORDMARK */}
       <Link href="/dashboard" className="group flex items-center gap-2">
-        {/* The Mark: Suspended Glass with Inner Glow */}
         <div className="relative w-8 h-8 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden transition-all duration-500 group-hover:border-emerald-500/30 group-hover:shadow-[0_0_20px_rgba(16,185,129,0.2)]">
-          {/* Inner "Light" */}
           <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           <span className="relative z-10 font-brand font-bold text-lg text-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.5)]">
             S
           </span>
         </div>
 
-        {/* The Type: Clean, Geometric, Tracking Animation */}
         <div className="flex flex-col justify-center h-full pt-1">
           <span className="font-brand font-bold text-lg text-zinc-200 tracking-tight transition-all duration-500 group-hover:tracking-wide group-hover:text-white group-hover:-translate-y-[1px]">
             SignalForge
           </span>
-          {/* Subtle underline energy that appears on hover */}
           <span className="h-[1px] w-0 bg-emerald-500/50 group-hover:w-full transition-all duration-700 ease-out" />
         </div>
       </Link>
 
-      {/* RIGHT: PROFILE CONTROL (Simplified) */}
+      {/* RIGHT: PROFILE CONTROL */}
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setIsOpen(!isOpen)}
@@ -72,13 +75,11 @@ export function AppNavbar() {
               : "border-transparent hover:border-zinc-800 hover:bg-white/5"
           }`}
         >
-          {/* Avatar Glyph */}
           <div className="w-8 h-8 rounded-full bg-gradient-to-b from-zinc-800 to-zinc-900 flex items-center justify-center border border-zinc-700 group-hover:border-emerald-500/50 transition-colors shadow-inner">
             <User className="w-4 h-4 text-zinc-400 group-hover:text-emerald-400 transition-colors" />
           </div>
         </button>
 
-        {/* GLASS DROPDOWN */}
         <AnimatePresence>
           {isOpen && (
             <motion.div

@@ -1,22 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Search, Plus, TrendingUp, Clock, ArrowUpRight } from "lucide-react";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/lib/supabase";
 
-// --- TYPES ---
 interface Report {
   id: number;
   ticker: string;
   company_name: string;
   created_at: string;
-  sentiment_score: number; // 0-100
+  sentiment_score: number;
 }
 
-// --- MOCK DATA (Until Supabase) ---
 const MOCK_REPORTS: Report[] = [
   {
     id: 101,
@@ -39,13 +38,6 @@ const MOCK_REPORTS: Report[] = [
     created_at: "2024-02-10T09:15:00Z",
     sentiment_score: 45,
   },
-  {
-    id: 104,
-    ticker: "PLTR",
-    company_name: "Palantir Tech",
-    created_at: "2024-02-08T16:45:00Z",
-    sentiment_score: 72,
-  },
 ];
 
 export default function DashboardPage() {
@@ -54,19 +46,27 @@ export default function DashboardPage() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // Authentication & Data Load
   useEffect(() => {
-    const token = localStorage.getItem("token");
-    if (!token) {
-      router.push("/auth/signin");
-      return;
-    }
+    const checkSession = async () => {
+      // ✅ FIX: Check real Supabase session
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-    // Simulate Network Request
-    setTimeout(() => {
-      setReports(MOCK_REPORTS);
-      setLoading(false);
-    }, 800);
+      if (!session) {
+        // If no user, bounce to signin
+        router.push("/auth/signin");
+        return;
+      }
+
+      // If user exists, load data (mock for now, real later)
+      setTimeout(() => {
+        setReports(MOCK_REPORTS);
+        setLoading(false);
+      }, 800);
+    };
+
+    checkSession();
   }, [router]);
 
   const filteredReports = reports.filter(
@@ -77,7 +77,7 @@ export default function DashboardPage() {
 
   return (
     <div className="max-w-7xl mx-auto space-y-12">
-      {/* 1. HEADER: Restrained, Calm */}
+      {/* 1. HEADER */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div className="space-y-2">
           <motion.h1
@@ -93,7 +93,7 @@ export default function DashboardPage() {
             transition={{ delay: 0.1 }}
             className="text-zinc-500 font-light"
           >
-            Private Vault // User: 0x47...2A
+            Private Vault // SignalForge V1
           </motion.p>
         </div>
 
@@ -103,7 +103,6 @@ export default function DashboardPage() {
           transition={{ delay: 0.2 }}
           className="flex items-center gap-4"
         >
-          {/* SEARCH FIELD */}
           <div className="relative group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600 group-focus-within:text-emerald-500 transition-colors" />
             <input
@@ -115,7 +114,6 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* NEW ANALYSIS BUTTON */}
           <Button
             onClick={() => router.push("/agent")}
             className="bg-white text-black hover:bg-emerald-400 hover:text-black border-none rounded-full px-6 transition-all duration-300 shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_20px_rgba(52,211,153,0.4)]"
@@ -125,7 +123,7 @@ export default function DashboardPage() {
         </motion.div>
       </div>
 
-      {/* 2. THE ARCHIVE GRID */}
+      {/* 2. GRID */}
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
@@ -136,7 +134,6 @@ export default function DashboardPage() {
           ))}
         </div>
       ) : filteredReports.length === 0 ? (
-        // EMPTY STATE
         <div className="h-96 flex flex-col items-center justify-center border border-dashed border-zinc-800 rounded-3xl bg-zinc-900/10">
           <div className="w-16 h-16 bg-zinc-900 rounded-full flex items-center justify-center mb-4">
             <TrendingUp className="w-6 h-6 text-zinc-600" />
@@ -157,7 +154,6 @@ export default function DashboardPage() {
   );
 }
 
-// --- SUB-COMPONENT: REPORT CARD ---
 function ReportCard({ report, index }: { report: Report; index: number }) {
   const router = useRouter();
 
@@ -170,12 +166,9 @@ function ReportCard({ report, index }: { report: Report; index: number }) {
       onClick={() => router.push(`/agent?id=${report.id}`)}
       className="group relative h-52 bg-zinc-900/40 backdrop-blur-md border border-white/5 hover:border-emerald-500/30 rounded-2xl p-6 cursor-pointer overflow-hidden transition-colors duration-500"
     >
-      {/* Background Gradient on Hover */}
       <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-      {/* CARD CONTENT */}
       <div className="relative z-10 flex flex-col h-full justify-between">
-        {/* Top Row */}
         <div className="flex justify-between items-start">
           <div>
             <h3 className="text-2xl font-bold text-white tracking-tight font-brand">
@@ -183,7 +176,6 @@ function ReportCard({ report, index }: { report: Report; index: number }) {
             </h3>
             <p className="text-sm text-zinc-500">{report.company_name}</p>
           </div>
-          {/* Sparkline Visual (Fake CSS chart) */}
           <div className="flex items-end gap-1 h-8">
             {[40, 60, 45, 70, 50].map((h, j) => (
               <div
@@ -195,7 +187,6 @@ function ReportCard({ report, index }: { report: Report; index: number }) {
           </div>
         </div>
 
-        {/* Middle: Info */}
         <div className="space-y-2">
           <div className="flex items-center gap-2 text-xs text-zinc-500 font-mono">
             <Clock className="w-3 h-3" />
@@ -212,7 +203,6 @@ function ReportCard({ report, index }: { report: Report; index: number }) {
           </div>
         </div>
 
-        {/* Bottom Action Hint */}
         <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
           <span className="text-xs text-emerald-400 flex items-center gap-1">
             Open File <ArrowUpRight className="w-3 h-3" />

@@ -8,11 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BeamTerminal } from "@/components/auth/beam-terminal";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/lib/supabase";
 
 export default function SignUpPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  const [fullName, setFullName] = useState("");
+  const [role, setRole] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const strength =
@@ -22,21 +27,38 @@ export default function SignUpPage() {
     e.preventDefault();
     setLoading(true);
 
-    setTimeout(() => {
-      localStorage.setItem("token", "demo-access-token");
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+          role: role,
+        },
+      },
+    });
+
+    if (error) {
+      alert("Error: " + error.message);
       setLoading(false);
-      setSuccess(true);
-      setTimeout(() => {
-        router.push("/dashboard");
-      }, 2000);
-    }, 2000);
+      return;
+    }
+
+    // SUCCESS RITUAL
+    setLoading(false);
+    setSuccess(true);
+
+    // Redirect to Login instead of Dashboard
+    setTimeout(() => {
+      router.push("/auth/signin");
+    }, 2500);
   };
 
   return (
     <AnimatePresence mode="wait">
       {!success ? (
         <BeamTerminal
-          key="signup-terminal" // Forces the scan ritual to replay on page switch
+          key="signup-terminal"
           header={
             <>
               <div className="mb-8 border-l-2 border-emerald-500 pl-4 text-left">
@@ -57,6 +79,8 @@ export default function SignUpPage() {
                   placeholder="Full Name"
                   required
                   className="bg-black/20 border-zinc-800 text-white h-11 focus:border-emerald-500/50 transition-all"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
                 />
               </InputWrapper>
               <InputWrapper>
@@ -64,6 +88,8 @@ export default function SignUpPage() {
                   placeholder="Role (e.g. Analyst)"
                   required
                   className="bg-black/20 border-zinc-800 text-white h-11 focus:border-emerald-500/50 transition-all"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
                 />
               </InputWrapper>
             </div>
@@ -74,6 +100,8 @@ export default function SignUpPage() {
                 placeholder="Work Email"
                 required
                 className="bg-black/20 border-zinc-800 text-white h-11 focus:border-emerald-500/50 transition-all"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
             </InputWrapper>
 
@@ -89,34 +117,15 @@ export default function SignUpPage() {
                 />
               </InputWrapper>
 
-              {/* Password Strength */}
               <div className="flex gap-1 h-1">
                 <div
-                  className={`flex-1 rounded-full transition-colors duration-500 ${
-                    password.length > 0
-                      ? strength === "low"
-                        ? "bg-red-500"
-                        : strength === "medium"
-                          ? "bg-yellow-500"
-                          : "bg-emerald-500"
-                      : "bg-zinc-800"
-                  }`}
+                  className={`flex-1 rounded-full transition-colors duration-500 ${password.length > 0 ? (strength === "low" ? "bg-red-500" : strength === "medium" ? "bg-yellow-500" : "bg-emerald-500") : "bg-zinc-800"}`}
                 />
                 <div
-                  className={`flex-1 rounded-full transition-colors duration-500 ${
-                    password.length > 0 && strength !== "low"
-                      ? strength === "medium"
-                        ? "bg-yellow-500"
-                        : "bg-emerald-500"
-                      : "bg-zinc-800"
-                  }`}
+                  className={`flex-1 rounded-full transition-colors duration-500 ${password.length > 0 && strength !== "low" ? (strength === "medium" ? "bg-yellow-500" : "bg-emerald-500") : "bg-zinc-800"}`}
                 />
                 <div
-                  className={`flex-1 rounded-full transition-colors duration-500 ${
-                    password.length > 0 && strength === "strong"
-                      ? "bg-emerald-500"
-                      : "bg-zinc-800"
-                  }`}
+                  className={`flex-1 rounded-full transition-colors duration-500 ${password.length > 0 && strength === "strong" ? "bg-emerald-500" : "bg-zinc-800"}`}
                 />
               </div>
               <p className="text-xs text-right text-zinc-500 capitalize">
@@ -150,7 +159,7 @@ export default function SignUpPage() {
           </form>
         </BeamTerminal>
       ) : (
-        /* SUCCESS STATE */
+        /* SUCCESS STATE - Updated Text */
         <motion.div
           key="signup-success"
           initial={{ opacity: 0, scale: 0.9 }}
@@ -168,14 +177,14 @@ export default function SignUpPage() {
               Workspace Provisioned
             </h2>
             <p className="text-zinc-400 max-w-xs mx-auto">
-              Identity confirmed. Redirecting to secure channel...
+              Identity confirmed. Redirecting to access terminal...
             </p>
           </div>
           <div className="h-1 w-48 bg-zinc-800 rounded-full mx-auto overflow-hidden">
             <motion.div
               initial={{ width: "0%" }}
               animate={{ width: "100%" }}
-              transition={{ duration: 1.5, ease: "easeInOut" }}
+              transition={{ duration: 2, ease: "easeInOut" }}
               className="h-full bg-emerald-500"
             />
           </div>
@@ -185,7 +194,6 @@ export default function SignUpPage() {
   );
 }
 
-// Input Helper
 function InputWrapper({ children }: { children: React.ReactNode }) {
   return (
     <div className="group relative">
