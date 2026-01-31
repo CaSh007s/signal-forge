@@ -4,7 +4,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, Variants, AnimatePresence } from "framer-motion";
 import { LayoutDashboard, Radio, Pin, PinOff } from "lucide-react";
-import { useState } from "react";
 import { useSidebar } from "@/context/sidebar-context";
 
 const menuItems = [
@@ -24,37 +23,23 @@ const itemVariants: Variants = {
 
 export function LatentSidebar() {
   const pathname = usePathname();
-  const { isPinned, togglePin } = useSidebar();
-  const [isHovered, setIsHovered] = useState(false);
-
-  const isVisible = isPinned || isHovered;
+  const { isPinned, isExpanded, togglePin, setHovered } = useSidebar();
 
   return (
     <>
-      {/* 1. THE GLASS SEAMS */}
+      {/* 1. GLASS SEAMS */}
       <AnimatePresence>
-        {!isVisible && (
+        {!isExpanded && (
           <motion.div
             initial={{ opacity: 0 }}
-            animate={{
-              opacity: [0.2, 0.6, 0.2],
-              scale: 1,
-            }}
-            exit={{
-              opacity: 0,
-              scale: 0.95,
-              transition: { duration: 0.5, ease: "easeOut" },
-            }}
+            animate={{ opacity: [0.2, 0.6, 0.2], scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
             transition={{
-              // Slower breathing cycle for a calmer feel
               opacity: { duration: 6, repeat: Infinity, ease: "easeInOut" },
             }}
             className="fixed left-2 top-1/2 -translate-y-1/2 z-40 pointer-events-none flex gap-[3px]"
           >
-            {/* Primary Edge with Emerald Glow */}
             <div className="w-[1px] h-14 bg-white/40 shadow-[0_0_30px_rgba(16,185,129,0.6)] rounded-full backdrop-blur-md" />
-
-            {/* Secondary, subtler edge for depth */}
             <div className="w-[1px] h-14 bg-white/20 shadow-[0_0_20px_rgba(16,185,129,0.3)] rounded-full backdrop-blur-md" />
           </motion.div>
         )}
@@ -63,24 +48,24 @@ export function LatentSidebar() {
       {/* 2. TRIGGER ZONE */}
       {!isPinned && (
         <div
-          onMouseEnter={() => setIsHovered(true)}
+          onMouseEnter={() => setHovered(true)}
           className="fixed left-0 top-0 w-6 h-full z-50 bg-transparent"
         />
       )}
 
-      {/* 3. THE LATENT PANEL */}
+      {/* 3. THE PANEL */}
       <motion.div
         initial={false}
         animate={{
-          width: isVisible ? 280 : 0,
-          backdropFilter: isVisible ? "blur(24px)" : "blur(0px)",
-          backgroundColor: isVisible ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0)",
-          borderRightColor: isVisible
+          width: isExpanded ? 280 : 0,
+          backdropFilter: isExpanded ? "blur(24px)" : "blur(0px)",
+          backgroundColor: isExpanded ? "rgba(0,0,0,0.6)" : "rgba(0,0,0,0)",
+          borderRightColor: isExpanded
             ? "rgba(255,255,255,0.08)"
             : "rgba(255,255,255,0)",
         }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        onMouseLeave={() => setIsHovered(false)}
+        onMouseLeave={() => setHovered(false)}
         className="fixed left-0 top-0 h-full z-50 overflow-hidden flex flex-col border-r border-transparent"
       >
         <div className="w-[280px] h-full flex flex-col p-6 relative">
@@ -88,7 +73,7 @@ export function LatentSidebar() {
 
           <motion.div
             initial="hidden"
-            animate={isVisible ? "visible" : "hidden"}
+            animate={isExpanded ? "visible" : "hidden"}
             variants={{
               hidden: { opacity: 0 },
               visible: {
@@ -135,7 +120,6 @@ export function LatentSidebar() {
                       <span className="font-medium tracking-wide text-sm">
                         {item.name}
                       </span>
-
                       {isActive && (
                         <motion.div
                           layoutId="active-pill"
