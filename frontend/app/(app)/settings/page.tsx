@@ -15,10 +15,14 @@ import {
   Moon,
   Sun,
   Check,
-  ArrowRight,
+  RefreshCw,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { supabase } from "@/lib/supabase";
+import Image from "next/image";
+import { User as SupabaseUser } from "@supabase/supabase-js";
 
 // --- TABS CONFIG ---
 const TABS = [
@@ -36,21 +40,51 @@ export default function SettingsPage() {
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // --- MOCK CHANGE DETECTION ---
-  // In a real app, this would compare form state to initial state
+  // Real User State
+  const [user, setUser] = useState<SupabaseUser | null>(null);
+
+  useEffect(() => {
+    const getUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) setUser(user);
+    };
+    getUser();
+  }, []);
+
   const handleInputChange = () => {
     setHasChanges(true);
   };
 
-  const handleSave = () => {
+  // ✅ NEW: Real Save Logic
+  const handleSave = async () => {
     setIsSaving(true);
-    // Simulate API Call
+
+    // Check if we are saving profile data
+    if (user) {
+      const updates = {
+        data: {
+          full_name: user.user_metadata.full_name,
+          avatar_style: user.user_metadata.avatar_style || "shapes",
+        },
+      };
+
+      const { error } = await supabase.auth.updateUser(updates);
+
+      if (error) {
+        alert("Error saving: " + error.message);
+        setIsSaving(false);
+        return;
+      }
+    }
+
+    // Simulate success delay for UX
     setTimeout(() => {
       setIsSaving(false);
       setHasChanges(false);
-      // Brief success effect then redirect
-      router.push("/dashboard");
-    }, 1200);
+      router.refresh(); // Refresh to update navbar name
+    }, 1000);
   };
 
   return (
@@ -105,9 +139,16 @@ export default function SettingsPage() {
             transition={{ duration: 0.4 }}
             className="w-full max-w-2xl"
           >
+            {/* ✅ UPDATED: Pass real user props to Profile */}
             {activeTab === "profile" && (
-              <ProfileSection onChange={handleInputChange} />
+              <ProfileSection
+                user={user}
+                setUser={setUser}
+                onChange={handleInputChange}
+              />
             )}
+
+            {/* Keeping other sections exactly as they were */}
             {activeTab === "security" && (
               <SecuritySection onChange={handleInputChange} />
             )}
@@ -138,11 +179,12 @@ export default function SettingsPage() {
           >
             <Button
               onClick={handleSave}
+              disabled={isSaving}
               className="h-14 px-8 bg-emerald-500 hover:bg-emerald-400 text-black font-bold rounded-full shadow-[0_0_30px_rgba(16,185,129,0.4)] transition-all hover:scale-105"
             >
               {isSaving ? (
                 <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-black border-t-transparent rounded-full animate-spin" />
+                  <Loader2 className="w-4 h-4 animate-spin" />
                   Calibrating...
                 </div>
               ) : (
@@ -187,7 +229,40 @@ function SettingsField({
 }
 
 // 1. PROFILE TAB
-function ProfileSection({ onChange }: { onChange: () => void }) {
+function ProfileSection({
+  user,
+  setUser,
+  onChange,
+}: {
+  user: SupabaseUser | null;
+  setUser: React.Dispatch<React.SetStateAction<SupabaseUser | null>>;
+  onChange: () => void;
+}) {
+  // Guard clause if user hasn't loaded yet
+  if (!user)
+    return <div className="text-zinc-500">Loading identity protocol...</div>;
+
+  // DiceBear Logic
+  const avatarStyle = user.user_metadata?.avatar_style || "shapes";
+  const avatarUrl = `https://api.dicebear.com/7.x/${avatarStyle}/svg?seed=${user.id}&backgroundColor=09090b`;
+
+  const cycleAvatar = () => {
+    const newStyle = avatarStyle === "shapes" ? "identicon" : "shapes";
+    setUser({
+      ...user,
+      user_metadata: { ...user.user_metadata, avatar_style: newStyle },
+    });
+    onChange();
+  };
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUser({
+      ...user,
+      user_metadata: { ...user.user_metadata, full_name: e.target.value },
+    });
+    onChange();
+  };
+
   return (
     <div className="space-y-8">
       <SectionHeader
@@ -196,38 +271,51 @@ function ProfileSection({ onChange }: { onChange: () => void }) {
       />
 
       <div className="flex items-center gap-6">
-        <div className="w-24 h-24 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center relative group cursor-pointer hover:border-emerald-500/50 transition-colors">
-          <User className="w-8 h-8 text-zinc-600 group-hover:text-emerald-500 transition-colors" />
-          <div className="absolute inset-0 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-            <span className="text-xs text-white">Edit</span>
+        {/* Functional Avatar */}
+        <div className="relative group">
+          <div className="w-24 h-24 rounded-full bg-zinc-900 border border-zinc-800 overflow-hidden relative shadow-[0_0_30px_rgba(16,185,129,0.1)]">
+            <Image
+              src={avatarUrl}
+              alt="Avatar"
+              width={96}
+              height={96}
+              className="w-full h-full object-cover"
+              unoptimized // Needed for external SVG URLs usually
+            />
           </div>
+          {/* Reroll Button */}
+          <button
+            onClick={cycleAvatar}
+            className="absolute bottom-0 right-0 p-2 rounded-full bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-emerald-400 hover:border-emerald-500/50 transition-all shadow-lg"
+          >
+            <RefreshCw className="w-3 h-3" />
+          </button>
         </div>
+
         <div className="space-y-1">
           <h3 className="text-white font-medium">User Avatar</h3>
-          <p className="text-sm text-zinc-500">Supports JPG, PNG (Max 2MB)</p>
+          <p className="text-sm text-zinc-500">
+            Procedurally generated from UID.
+          </p>
         </div>
       </div>
 
       <div className="grid gap-6">
         <SettingsField label="Display Name">
           <Input
-            onChange={onChange}
+            value={user.user_metadata?.full_name || ""}
+            onChange={handleNameChange}
             placeholder="e.g. Cipher One"
             className="bg-black/20 border-zinc-800 focus:border-emerald-500/50 h-12 text-white"
           />
         </SettingsField>
-        <SettingsField label="Username">
+
+        {/* Read Only Email */}
+        <SettingsField label="Internal ID (Immutable)">
           <Input
-            onChange={onChange}
-            placeholder="@cipher"
-            className="bg-black/20 border-zinc-800 focus:border-emerald-500/50 h-12 text-white"
-          />
-        </SettingsField>
-        <SettingsField label="Email Address">
-          <Input
-            onChange={onChange}
-            placeholder="user@signalforge.ai"
-            className="bg-black/20 border-zinc-800 focus:border-emerald-500/50 h-12 text-white"
+            value={user.email || ""}
+            readOnly
+            className="bg-black/20 border-zinc-800 text-zinc-500 h-12 cursor-not-allowed"
           />
         </SettingsField>
       </div>
@@ -235,7 +323,7 @@ function ProfileSection({ onChange }: { onChange: () => void }) {
   );
 }
 
-// 2. SECURITY TAB
+// 2. SECURITY TAB (Mock UI preserved)
 function SecuritySection({ onChange }: { onChange: () => void }) {
   return (
     <div className="space-y-8">
@@ -285,7 +373,7 @@ function SecuritySection({ onChange }: { onChange: () => void }) {
   );
 }
 
-// 3. PREFERENCES TAB
+// 3. PREFERENCES TAB (Mock UI preserved)
 function PreferencesSection({ onChange }: { onChange: () => void }) {
   return (
     <div className="space-y-8">
@@ -334,7 +422,7 @@ function PreferencesSection({ onChange }: { onChange: () => void }) {
   );
 }
 
-// 4. APPEARANCE TAB (Structure Only)
+// 4. APPEARANCE TAB (Mock UI preserved)
 function AppearanceSection({ onChange }: { onChange: () => void }) {
   return (
     <div className="space-y-8">
@@ -370,7 +458,7 @@ function AppearanceSection({ onChange }: { onChange: () => void }) {
           </div>
         </div>
 
-        {/* THEME 2: VIOLET (Light) - Mocked Visuals */}
+        {/* THEME 2: VIOLET (Light) */}
         <div
           onClick={onChange}
           className="group cursor-pointer relative aspect-video rounded-2xl bg-zinc-100 border-2 border-transparent hover:border-purple-400 overflow-hidden transition-all"
@@ -392,7 +480,7 @@ function AppearanceSection({ onChange }: { onChange: () => void }) {
   );
 }
 
-// 5. WORKSPACE TAB
+// 5. WORKSPACE TAB (Mock UI preserved)
 function WorkspaceSection({ onChange }: { onChange: () => void }) {
   return (
     <div className="space-y-8">
@@ -427,7 +515,7 @@ function WorkspaceSection({ onChange }: { onChange: () => void }) {
   );
 }
 
-// 6. DATA TAB
+// 6. DATA TAB (Mock UI preserved)
 function DataSection({ onChange }: { onChange: () => void }) {
   return (
     <div className="space-y-8">
