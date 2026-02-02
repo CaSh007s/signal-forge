@@ -44,10 +44,13 @@ export default function AgentPage() {
   const [downloading, setDownloading] = useState(false);
 
   const logsEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll logs
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
+  // Load existing report if ID is present
   useEffect(() => {
     if (reportId) {
       fetchReport(reportId);
@@ -57,7 +60,10 @@ export default function AgentPage() {
   const fetchReport = async (id: string) => {
     setLoading(true);
     try {
-      const token = getToken();
+      const token = await getToken();
+
+      if (!token) return;
+
       const res = await fetch(`http://127.0.0.1:8000/api/reports/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -66,6 +72,7 @@ export default function AgentPage() {
         setReport({
           title: data.company_name,
           content: data.report_content,
+          chartData: data.chart_data || undefined,
         });
       }
     } catch (error) {
@@ -84,8 +91,6 @@ export default function AgentPage() {
     ]);
     setReport(null);
 
-    const token = getToken();
-
     const logInterval = setInterval(() => {
       setLogs((prev) => [
         ...prev,
@@ -96,6 +101,12 @@ export default function AgentPage() {
     }, 1500);
 
     try {
+      const token = await getToken();
+
+      if (!token) {
+        throw new Error("Authentication failed");
+      }
+
       const res = await fetch("http://127.0.0.1:8000/api/analyze", {
         method: "POST",
         headers: {
@@ -134,23 +145,23 @@ export default function AgentPage() {
 
   const handleDownloadPDF = async () => {
     if (!report) return;
-    const element = document.getElementById("report-content");
+    const element = document.getElementById("print-content");
     if (!element) return;
 
     setDownloading(true);
 
     try {
-      // 1. Capture High-Res Image
+      // 1. Temporarily make it visible to capture
+      element.style.display = "block";
+
       const dataUrl = await toPng(element, {
         quality: 1.0,
         pixelRatio: 2,
         backgroundColor: "#ffffff",
-        style: {
-          color: "#000000",
-          fontFamily: "Georgia, serif",
-          padding: "40px",
-        },
       });
+
+      // Hide it again immediately
+      element.style.display = "none";
 
       // 2. Setup PDF Stats
       const pdf = new jsPDF("p", "mm", "a4");
@@ -180,7 +191,7 @@ export default function AgentPage() {
 
       // Add first page content
       pdf.addImage(dataUrl, "PNG", 0, position, pdfWidth, imgHeight);
-      heightLeft -= pdfHeight - position; // Subtract usable space on pg 1
+      heightLeft -= pdfHeight - position;
 
       // Add subsequent pages
       while (heightLeft > 0) {
@@ -324,10 +335,31 @@ export default function AgentPage() {
             </div>
           </div>
 
-          {/* REPORT CONTENT WRAPPER */}
-          {/* We use specific text colors here that work in Dark Mode but get overridden in PDF generation */}
-          <div id="report-content" className="bg-bg p-4 rounded-xl">
-            {/* STOCK CHART SECTION */}
+          {/* HIDDEN PRINT CONTAINER 
+            This is what gets screenshotted for the PDF. 
+            It mimics a "White Paper" look.
+          */}
+          <div
+            id="print-content"
+            className="fixed top-0 left-0 -z-50 w-[800px] bg-white text-black p-12 hidden"
+          >
+            <h1 className="text-4xl font-bold mb-2 text-black">
+              {report.title}
+            </h1>
+            <p className="text-gray-500 mb-8 border-b pb-4">
+              SignalForge Intelligence Report //{" "}
+              {new Date().toLocaleDateString()}
+            </p>
+
+            <div className="prose max-w-none text-black">
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                {report.content}
+              </ReactMarkdown>
+            </div>
+          </div>
+
+          {/* VISIBLE DARK MODE CONTENT */}
+          <div className="bg-bg p-4 rounded-xl">
             {report.chartData && report.chartData.history && (
               <div className="mt-6 mb-8 p-4 bg-zinc-900/50 rounded-lg border border-zinc-800">
                 <StockChart
@@ -337,7 +369,6 @@ export default function AgentPage() {
               </div>
             )}
 
-            {/* MARKDOWN CONTENT */}
             <div
               className="prose prose-invert prose-emerald max-w-none 
               prose-headings:font-bold prose-h1:text-3xl prose-h2:text-2xl prose-h2:mt-8 prose-h2:mb-4 prose-h2:pb-2 prose-h2:border-b prose-h2:border-zinc-800

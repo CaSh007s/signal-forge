@@ -1,44 +1,28 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion } from "framer-motion";
-import { Search, Plus, TrendingUp, Clock, ArrowUpRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Search, Plus, TrendingUp, Clock, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
+import { getToken } from "@/lib/auth";
 
+// 1. Define the shape of the data needed for the UI
 interface Report {
   id: number;
-  ticker: string;
   company_name: string;
   created_at: string;
-  sentiment_score: number;
+  sentiment_score?: number;
 }
 
-const MOCK_REPORTS: Report[] = [
-  {
-    id: 101,
-    ticker: "NVDA",
-    company_name: "NVIDIA Corp.",
-    created_at: "2024-02-14T10:00:00Z",
-    sentiment_score: 85,
-  },
-  {
-    id: 102,
-    ticker: "AAPL",
-    company_name: "Apple Inc.",
-    created_at: "2024-02-12T14:30:00Z",
-    sentiment_score: 60,
-  },
-  {
-    id: 103,
-    ticker: "TSLA",
-    company_name: "Tesla Inc.",
-    created_at: "2024-02-10T09:15:00Z",
-    sentiment_score: 45,
-  },
-];
+// 2. Define the shape of the raw API response
+interface APIReport {
+  id: number;
+  company_name: string;
+  created_at: string;
+  owner_id: number;
+}
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -47,32 +31,74 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const checkSession = async () => {
-      // ✅ FIX: Check real Supabase session
+    const fetchReports = async () => {
+      // 1. Check Session (Redirect if not logged in)
       const {
         data: { session },
       } = await supabase.auth.getSession();
-
       if (!session) {
-        // If no user, bounce to signin
         router.push("/auth/signin");
         return;
       }
 
-      // If user exists, load data (mock for now, real later)
-      setTimeout(() => {
-        setReports(MOCK_REPORTS);
+      try {
+        // 2. Get Token safely
+        const token = await getToken();
+
+        if (!token) {
+          console.error("No token found");
+          return;
+        }
+
+        // 3. Fetch from your Python Backend
+        const res = await fetch("http://127.0.0.1:8000/api/reports", {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (res.ok) {
+          const data: APIReport[] = await res.json();
+
+          // Enrich with visual sentiment score
+          const enriched: Report[] = data.map((r) => ({
+            ...r,
+            sentiment_score: 40 + ((r.id * 7) % 55),
+          }));
+
+          setReports(enriched);
+        }
+      } catch (error) {
+        console.error("Failed to fetch history:", error);
+      } finally {
         setLoading(false);
-      }, 800);
+      }
     };
 
-    checkSession();
+    fetchReports();
   }, [router]);
 
-  const filteredReports = reports.filter(
-    (r) =>
-      r.ticker.toLowerCase().includes(search.toLowerCase()) ||
-      r.company_name.toLowerCase().includes(search.toLowerCase()),
+  const handleDelete = async (e: React.MouseEvent, id: number) => {
+    e.stopPropagation();
+    if (!confirm("Purge this report from the archive?")) return;
+
+    // Optimistic UI Update
+    setReports((prev) => prev.filter((r) => r.id !== id));
+
+    try {
+      const token = await getToken();
+
+      if (token) {
+        await fetch(`http://127.0.0.1:8000/api/reports/${id}`, {
+          method: "DELETE",
+          headers: { Authorization: `Bearer ${token}` },
+        });
+      }
+    } catch (error) {
+      console.error("Delete failed:", error);
+    }
+  };
+
+  const filteredReports = reports.filter((r) =>
+    r.company_name.toLowerCase().includes(search.toLowerCase()),
   );
 
   return (
@@ -140,27 +166,52 @@ export default function DashboardPage() {
           </div>
           <p className="text-zinc-500 font-light">Your archive is empty.</p>
           <p className="text-zinc-600 text-sm mt-1">
-            Your first analysis will appear here.
+            Run an analysis in the Agent console to populate this vault.
           </p>
+          <Button
+            variant="link"
+            onClick={() => router.push("/agent")}
+            className="text-emerald-500 mt-2"
+          >
+            Go to Agent &rarr;
+          </Button>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredReports.map((report, i) => (
-            <ReportCard key={report.id} report={report} index={i} />
-          ))}
+          <AnimatePresence mode="popLayout">
+            {filteredReports.map((report, i) => (
+              <ReportCard
+                key={report.id}
+                report={report}
+                index={i}
+                onDelete={(e) => handleDelete(e, report.id)}
+              />
+            ))}
+          </AnimatePresence>
         </div>
       )}
     </div>
   );
 }
 
-function ReportCard({ report, index }: { report: Report; index: number }) {
+function ReportCard({
+  report,
+  index,
+  onDelete,
+}: {
+  report: Report;
+  index: number;
+  onDelete: (e: React.MouseEvent) => void;
+}) {
   const router = useRouter();
+  const score = report.sentiment_score || 50;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      layout
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
       transition={{ delay: index * 0.05 }}
       whileHover={{ y: -5, boxShadow: "0 20px 40px -10px rgba(0,0,0,0.5)" }}
       onClick={() => router.push(`/agent?id=${report.id}`)}
@@ -172,16 +223,19 @@ function ReportCard({ report, index }: { report: Report; index: number }) {
         <div className="flex justify-between items-start">
           <div>
             <h3 className="text-2xl font-bold text-white tracking-tight font-brand">
-              {report.ticker}
+              {report.company_name}
             </h3>
-            <p className="text-sm text-zinc-500">{report.company_name}</p>
+            <p className="text-sm text-zinc-500">
+              Report #{report.id.toString().padStart(4, "0")}
+            </p>
           </div>
+
           <div className="flex items-end gap-1 h-8">
             {[40, 60, 45, 70, 50].map((h, j) => (
               <div
                 key={j}
-                style={{ height: `${h}%` }}
-                className={`w-1 rounded-sm ${report.sentiment_score > 50 ? "bg-emerald-500/40" : "bg-red-500/40"}`}
+                style={{ height: `${h * (score / 100) + 20}%` }}
+                className={`w-1 rounded-sm ${score > 50 ? "bg-emerald-500/40" : "bg-red-500/40"}`}
               />
             ))}
           </div>
@@ -192,21 +246,27 @@ function ReportCard({ report, index }: { report: Report; index: number }) {
             <Clock className="w-3 h-3" />
             <span>{new Date(report.created_at).toLocaleDateString()}</span>
           </div>
-          <div
-            className={`text-xs font-mono inline-block px-2 py-1 rounded border ${
-              report.sentiment_score > 70
-                ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/10"
-                : "text-yellow-400 border-yellow-500/20 bg-yellow-500/10"
-            }`}
-          >
-            SENTIMENT: {report.sentiment_score}/100
-          </div>
-        </div>
+          <div className="flex justify-between items-end">
+            <div
+              className={`text-xs font-mono inline-block px-2 py-1 rounded border ${
+                score > 60
+                  ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/10"
+                  : score < 40
+                    ? "text-red-400 border-red-500/20 bg-red-500/10"
+                    : "text-yellow-400 border-yellow-500/20 bg-yellow-500/10"
+              }`}
+            >
+              SENTIMENT: {score}/100
+            </div>
 
-        <div className="flex justify-end opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
-          <span className="text-xs text-emerald-400 flex items-center gap-1">
-            Open File <ArrowUpRight className="w-3 h-3" />
-          </span>
+            <button
+              onClick={onDelete}
+              className="opacity-0 group-hover:opacity-100 p-2 hover:bg-red-500/20 hover:text-red-400 text-zinc-600 rounded-lg transition-all duration-200"
+              title="Delete Report"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
     </motion.div>

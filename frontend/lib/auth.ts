@@ -1,63 +1,54 @@
-// Token Management
-export const setToken = (token: string) => {
-  if (typeof window !== "undefined") {
-    localStorage.setItem("signalforge_token", token);
-  }
+import { supabase } from "@/lib/supabase";
+
+export const getToken = async () => {
+  const { data } = await supabase.auth.getSession();
+  return data.session?.access_token || null;
 };
 
-export const getToken = () => {
-  if (typeof window !== "undefined") {
-    return localStorage.getItem("signalforge_token");
-  }
-  return null;
+export const isAuthenticated = async () => {
+  const token = await getToken();
+  return !!token;
 };
 
-export const removeToken = () => {
-  if (typeof window !== "undefined") {
-    localStorage.removeItem("signalforge_token");
-  }
-};
-
-export const isAuthenticated = () => {
-  return !!getToken();
-};
-
-// --- NEW: API Calls for Login/Register ---
-const API_URL = "http://127.0.0.1:8000/api";
+// Legacy Helpers (Refactored to use Supabase)
 
 export async function login(email: string, password: string) {
-  // Uses FormData because OAuth2PasswordRequestForm expects form data
-  const formData = new FormData();
-  formData.append("username", email);
-  formData.append("password", password);
-
-  const res = await fetch(`${API_URL}/auth/token`, {
-    method: "POST",
-    body: formData,
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
   });
 
-  if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(errorData.detail || "Login failed");
+  if (error) {
+    throw new Error(error.message);
   }
 
-  const data = await res.json();
-  setToken(data.access_token);
   return data;
 }
 
 export async function register(email: string, password: string) {
-  const res = await fetch(`${API_URL}/auth/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
   });
 
-  if (!res.ok) {
-    const errorData = await res.json();
-    throw new Error(errorData.detail || "Registration failed");
+  if (error) {
+    throw new Error(error.message);
   }
 
-  // Auto-login after register
-  return login(email, password);
+  return data;
 }
+
+export async function logout() {
+  await supabase.auth.signOut();
+  if (typeof window !== "undefined") {
+    localStorage.removeItem("signalforge_token");
+  }
+}
+
+export const setToken = (token: string) => {
+  console.log("setToken is deprecated: Supabase handles session storage.");
+};
+
+export const removeToken = () => {
+  // No-op: handled by logout()
+};

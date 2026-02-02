@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 # --- User Schemas ---
 class UserCreate(BaseModel):
@@ -32,5 +32,6 @@ class ReportResponse(ReportBase):
     id: int
     created_at: datetime
     owner_id: int 
+    
     class Config:
         from_attributes = True
