@@ -6,32 +6,26 @@ import { useRouter } from "next/navigation";
 import {
   User,
   Shield,
-  Sliders,
-  Palette,
-  Briefcase,
   Database,
   Save,
   AlertCircle,
-  Moon,
-  Sun,
-  Check,
   Loader2,
   Key,
+  Download,
+  Trash2,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
-import { useUser } from "@/context/user-context"; // Global Context
-import { User as SupabaseUser } from "@supabase/supabase-js"; // Type Alias
+import { useUser } from "@/context/user-context";
+import { User as SupabaseUser } from "@supabase/supabase-js";
 import Image from "next/image";
 
-// --- CONFIGURATION ---
+// CONFIGURATION
 const TABS = [
   { id: "profile", label: "Profile", icon: User },
   { id: "security", label: "Security", icon: Shield },
-  { id: "preferences", label: "Preferences", icon: Sliders },
-  { id: "appearance", label: "Appearance", icon: Palette },
-  { id: "workspace", label: "Workspace", icon: Briefcase },
   { id: "data", label: "Data & Privacy", icon: Database },
 ];
 
@@ -50,7 +44,7 @@ interface ProfileFormData {
 
 export default function SettingsPage() {
   const router = useRouter();
-  const { user, refreshUser } = useUser(); // Use Global Context
+  const { user, refreshUser } = useUser();
   const [activeTab, setActiveTab] = useState("profile");
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -91,7 +85,7 @@ export default function SettingsPage() {
         if (error) throw error;
       }
 
-      // 2. Refresh Global Context (Updates Navbar instantly)
+      // 2. Refresh Global Context
       await refreshUser();
 
       // 3. UX Feedback
@@ -166,18 +160,7 @@ export default function SettingsPage() {
               />
             )}
             {activeTab === "security" && <SecuritySection />}
-            {activeTab === "preferences" && (
-              <PreferencesSection onChange={() => setHasChanges(true)} />
-            )}
-            {activeTab === "appearance" && (
-              <AppearanceSection onChange={() => setHasChanges(true)} />
-            )}
-            {activeTab === "workspace" && (
-              <WorkspaceSection onChange={() => setHasChanges(true)} />
-            )}
-            {activeTab === "data" && (
-              <DataSection onChange={() => setHasChanges(true)} />
-            )}
+            {activeTab === "data" && user && <DataSection user={user} />}
           </motion.div>
         </AnimatePresence>
       </div>
@@ -214,7 +197,7 @@ export default function SettingsPage() {
   );
 }
 
-// --- SECTIONS (Sub-components) ---
+// --- SECTIONS ---
 
 function SectionHeader({ title, desc }: { title: string; desc: string }) {
   return (
@@ -242,7 +225,7 @@ function SettingsField({
   );
 }
 
-// 1. PROFILE TAB (FULLY FUNCTIONAL)
+// 1. PROFILE TAB
 function ProfileSection({
   user,
   formData,
@@ -328,7 +311,7 @@ function ProfileSection({
   );
 }
 
-// 2. SECURITY TAB (FUNCTIONAL PASSWORD UPDATE)
+// 2. SECURITY SECTION
 function SecuritySection() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -407,148 +390,81 @@ function SecuritySection() {
   );
 }
 
-// 3. PREFERENCES TAB (Mock UI)
-function PreferencesSection({ onChange }: { onChange: () => void }) {
-  return (
-    <div className="space-y-8">
-      <SectionHeader
-        title="Interface Physics"
-        desc="Tune the system's responsiveness and density."
-      />
+// 3. DATA SECTION
+function DataSection({ user }: { user: SupabaseUser }) {
+  const router = useRouter();
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [password, setPassword] = useState("");
+  const [loadingDelete, setLoadingDelete] = useState(false);
+  const [loadingExport, setLoadingExport] = useState(false);
 
-      <div className="space-y-8">
-        <SettingsField label="Motion Intensity">
-          <div
-            className="h-2 bg-zinc-800 rounded-full overflow-hidden relative group cursor-pointer"
-            onClick={onChange}
-          >
-            <div className="absolute left-0 top-0 h-full w-2/3 bg-emerald-500" />
-          </div>
-          <div className="flex justify-between text-xs text-zinc-600 mt-2 font-mono">
-            <span>Minimal</span>
-            <span>Cinematic</span>
-          </div>
-        </SettingsField>
+  // LOGIC: Export Data
+  const handleExport = async () => {
+    setLoadingExport(true);
 
-        <SettingsField label="Information Density">
-          <div className="grid grid-cols-2 gap-4">
-            <button
-              onClick={onChange}
-              className="p-4 border border-emerald-500/50 bg-emerald-500/10 rounded-xl text-left space-y-2"
-            >
-              <div className="w-8 h-4 bg-emerald-500/40 rounded" />
-              <span className="text-sm text-emerald-400 block">Comfort</span>
-            </button>
-            <button
-              onClick={onChange}
-              className="p-4 border border-zinc-800 bg-black/20 hover:border-zinc-700 rounded-xl text-left space-y-2"
-            >
-              <div className="space-y-1">
-                <div className="w-8 h-2 bg-zinc-700 rounded" />
-                <div className="w-8 h-2 bg-zinc-700 rounded" />
-              </div>
-              <span className="text-sm text-zinc-400 block">Compact</span>
-            </button>
-          </div>
-        </SettingsField>
-      </div>
-    </div>
-  );
-}
+    const exportData = {
+      identity: {
+        id: user.id,
+        email: user.email,
+        metadata: user.user_metadata,
+        created_at: user.created_at,
+      },
+      archive: "No active reports found in session context.",
+      timestamp: new Date().toISOString(),
+    };
 
-// 4. APPEARANCE TAB (Mock UI)
-function AppearanceSection({ onChange }: { onChange: () => void }) {
-  return (
-    <div className="space-y-8">
-      <SectionHeader
-        title="Environment Theme"
-        desc="Select the visual frequency of the workspace."
-      />
+    const jsonString = JSON.stringify(exportData, null, 2);
+    const blob = new Blob([jsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div
-          onClick={onChange}
-          className="group cursor-pointer relative aspect-video rounded-2xl bg-[#09090b] border-2 border-emerald-500 overflow-hidden shadow-[0_0_30px_rgba(16,185,129,0.1)]"
-        >
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:20px_20px]" />
-          <div className="absolute top-4 left-4 flex gap-2">
-            <div className="w-2 h-2 rounded-full bg-red-500/20" />
-            <div className="w-2 h-2 rounded-full bg-yellow-500/20" />
-            <div className="w-2 h-2 rounded-full bg-green-500/20" />
-          </div>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center space-y-2">
-              <div className="w-12 h-12 bg-emerald-500/20 rounded-full mx-auto flex items-center justify-center border border-emerald-500/30">
-                <Moon className="w-6 h-6 text-emerald-500" />
-              </div>
-              <span className="text-emerald-400 font-medium text-sm">
-                Signal (Default)
-              </span>
-            </div>
-          </div>
-          <div className="absolute bottom-4 right-4 text-emerald-500">
-            <Check className="w-5 h-5" />
-          </div>
-        </div>
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `signalforge_archive_${user.id.slice(0, 8)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 
-        <div
-          onClick={onChange}
-          className="group cursor-pointer relative aspect-video rounded-2xl bg-zinc-100 border-2 border-transparent hover:border-purple-400 overflow-hidden transition-all opacity-50 grayscale hover:grayscale-0 hover:opacity-100"
-        >
-          <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:20px_20px] opacity-50" />
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="text-center space-y-2">
-              <div className="w-12 h-12 bg-purple-500/10 rounded-full mx-auto flex items-center justify-center border border-purple-500/20">
-                <Sun className="w-6 h-6 text-purple-600" />
-              </div>
-              <span className="text-zinc-600 font-medium text-sm">
-                Violet (Light)
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+    setTimeout(() => setLoadingExport(false), 800);
+  };
 
-// 5. WORKSPACE TAB (Mock UI)
-function WorkspaceSection({ onChange }: { onChange: () => void }) {
-  return (
-    <div className="space-y-8">
-      <SectionHeader
-        title="Workspace Behavior"
-        desc="Configure defaults for agent initialization."
-      />
+  // LOGIC: Delete Account
+  const handleDelete = async () => {
+    if (!password) {
+      alert("Please confirm your password.");
+      return;
+    }
+    setLoadingDelete(true);
 
-      <div className="space-y-4">
-        <div className="flex items-center justify-between p-4 bg-black/20 border border-zinc-800 rounded-xl">
-          <span className="text-sm text-zinc-300">Auto-save Reports</span>
-          <div
-            className="relative inline-flex h-6 w-11 items-center rounded-full bg-emerald-500 cursor-pointer"
-            onClick={onChange}
-          >
-            <span className="translate-x-6 inline-block h-4 w-4 transform rounded-full bg-white transition" />
-          </div>
-        </div>
-        <div className="flex items-center justify-between p-4 bg-black/20 border border-zinc-800 rounded-xl">
-          <span className="text-sm text-zinc-300">
-            Default to Dashboard on Login
-          </span>
-          <div
-            className="relative inline-flex h-6 w-11 items-center rounded-full bg-emerald-500 cursor-pointer"
-            onClick={onChange}
-          >
-            <span className="translate-x-6 inline-block h-4 w-4 transform rounded-full bg-white transition" />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
+    try {
+      const { error: authError } = await supabase.auth.signInWithPassword({
+        email: user.email!,
+        password: password,
+      });
 
-// 6. DATA TAB (Mock UI)
-function DataSection({ onChange }: { onChange: () => void }) {
+      if (authError) {
+        throw new Error("Incorrect password. Deletion aborted.");
+      }
+
+      const sevenDaysFromNow = new Date();
+      sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+
+      const { error: updateError } = await supabase.auth.updateUser({
+        data: {
+          scheduled_for_deletion: sevenDaysFromNow.toISOString(),
+        },
+      });
+
+      if (updateError) throw updateError;
+
+      await supabase.auth.signOut();
+      router.push("/");
+      alert("Workspace scheduled for deletion. You have 7 days to recover.");
+    } catch (error) {
+      alert((error as Error).message);
+      setLoadingDelete(false);
+    }
+  };
+
   return (
     <div className="space-y-8">
       <SectionHeader
@@ -557,34 +473,95 @@ function DataSection({ onChange }: { onChange: () => void }) {
       />
 
       <div className="space-y-4">
+        {/* EXPORT BUTTON */}
         <Button
+          onClick={handleExport}
+          disabled={loadingExport}
           variant="outline"
           className="w-full justify-start h-12 bg-black/20 border-zinc-800 hover:bg-zinc-900 hover:text-white group"
         >
-          <Database className="w-4 h-4 mr-3 text-zinc-500 group-hover:text-emerald-400" />
+          {loadingExport ? (
+            <Loader2 className="w-4 h-4 mr-3 animate-spin" />
+          ) : (
+            <Download className="w-4 h-4 mr-3 text-zinc-500 group-hover:text-emerald-400" />
+          )}
           Export Intelligence Archive (JSON)
         </Button>
 
+        {/* DANGER ZONE */}
         <div className="pt-8 border-t border-white/5">
           <h4 className="text-red-400 font-medium mb-2">Danger Zone</h4>
-          <div className="p-4 border border-red-500/20 bg-red-500/5 rounded-xl space-y-4">
-            <div className="flex gap-3">
-              <AlertCircle className="w-5 h-5 text-red-500" />
-              <div className="space-y-1">
-                <p className="text-sm text-red-200">Delete Workspace</p>
-                <p className="text-xs text-red-400/60">
-                  Account scheduled for removal. Data retained for 7 days.
+
+          {!deleteConfirmOpen ? (
+            <div className="p-4 border border-red-500/20 bg-red-500/5 rounded-xl space-y-4">
+              <div className="flex gap-3">
+                <AlertCircle className="w-5 h-5 text-red-500" />
+                <div className="space-y-1">
+                  <p className="text-sm text-red-200">Delete Workspace</p>
+                  <p className="text-xs text-red-400/60">
+                    Account scheduled for removal. Data retained for 7 days.
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={() => setDeleteConfirmOpen(true)}
+                variant="destructive"
+                className="w-full bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 border border-red-500/20"
+              >
+                Initiate Deletion Sequence
+              </Button>
+            </div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              className="p-6 border border-red-500/30 bg-red-950/20 rounded-xl space-y-4"
+            >
+              <div className="space-y-2">
+                <h5 className="text-red-400 font-medium flex items-center gap-2">
+                  <Trash2 className="w-4 h-4" /> Confirm Deletion
+                </h5>
+                <p className="text-sm text-zinc-400">
+                  This action will log you out immediately. To cancel deletion,
+                  simply log back in within 7 days.
                 </p>
               </div>
-            </div>
-            <Button
-              onClick={onChange}
-              variant="destructive"
-              className="w-full bg-red-500/10 hover:bg-red-500 hover:text-white text-red-500 border border-red-500/20"
-            >
-              Initiate Deletion Sequence
-            </Button>
-          </div>
+
+              <div className="space-y-3 pt-2">
+                <label className="text-xs font-mono text-zinc-500 uppercase tracking-wider">
+                  Confirm Password
+                </label>
+                <Input
+                  type="password"
+                  placeholder="Enter master password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="bg-black/40 border-red-900/50 focus:border-red-500/50 text-white"
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <Button
+                  onClick={() => setDeleteConfirmOpen(false)}
+                  variant="ghost"
+                  className="flex-1 hover:bg-white/5 text-zinc-400"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleDelete}
+                  disabled={!password || loadingDelete}
+                  className="flex-1 bg-red-600 hover:bg-red-500 text-white"
+                >
+                  {loadingDelete ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    "Confirm & Delete"
+                  )}
+                </Button>
+              </div>
+            </motion.div>
+          )}
         </div>
       </div>
     </div>

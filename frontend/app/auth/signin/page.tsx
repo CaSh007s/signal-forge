@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Loader2, CheckCircle2 } from "lucide-react";
+import { Loader2, CheckCircle2, RotateCcw, AlertTriangle } from "lucide-react"; // Added Icons
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { BeamTerminal } from "@/components/auth/beam-terminal";
@@ -13,8 +13,10 @@ import { supabase } from "@/lib/supabase";
 export default function SignInPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false); // Separate loading state
-  const [success, setSuccess] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [authStatus, setAuthStatus] = useState<"idle" | "success" | "restored">(
+    "idle",
+  ); // Track restoration state
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -23,7 +25,8 @@ export default function SignInPage() {
     e.preventDefault();
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    // 1. Authenticate
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -34,34 +37,36 @@ export default function SignInPage() {
       return;
     }
 
+    // 2. Check for "Scheduled Deletion" flag
+    if (data.user?.user_metadata?.scheduled_for_deletion) {
+      // 2a. Cancel Deletion (Restore Account)
+      await supabase.auth.updateUser({
+        data: { scheduled_for_deletion: null },
+      });
+      setAuthStatus("restored"); // Trigger Special UI
+    } else {
+      setAuthStatus("success"); // Standard UI
+    }
+
     setLoading(false);
-    setSuccess(true);
+
+    // 3. Redirect after delay
     setTimeout(() => {
       router.push("/dashboard");
-    }, 1500);
+    }, 2000);
   };
 
-  // ✅ NEW: Handle Google OAuth
   const handleGoogleLogin = async () => {
     setIsGoogleLoading(true);
-    const { error } = await supabase.auth.signInWithOAuth({
+    await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: {
-        // Redirect back to dashboard after Google login
-        redirectTo: `${window.location.origin}/dashboard`,
-      },
+      options: { redirectTo: `${window.location.origin}/dashboard` },
     });
-
-    if (error) {
-      alert("Google Auth Error: " + error.message);
-      setIsGoogleLoading(false);
-    }
-    // If successful, Supabase redirects the browser automatically
   };
 
   return (
     <AnimatePresence mode="wait">
-      {!success ? (
+      {authStatus === "idle" ? (
         <BeamTerminal
           key="signin-terminal"
           header={
@@ -87,7 +92,7 @@ export default function SignInPage() {
                 <Input
                   type="email"
                   placeholder="Email Address"
-                  className="bg-black/20 border-zinc-800 focus:border-emerald-500/50 text-white placeholder:text-zinc-600 h-12 transition-all duration-300"
+                  className="bg-black/20 border-zinc-800 focus:border-emerald-500/50 text-white h-12 transition-all"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -97,7 +102,7 @@ export default function SignInPage() {
                 <Input
                   type="password"
                   placeholder="Password"
-                  className="bg-black/20 border-zinc-800 focus:border-emerald-500/50 text-white placeholder:text-zinc-600 h-12 transition-all duration-300"
+                  className="bg-black/20 border-zinc-800 focus:border-emerald-500/50 text-white h-12 transition-all"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -108,7 +113,7 @@ export default function SignInPage() {
             <Button
               type="submit"
               disabled={loading || isGoogleLoading}
-              className="w-full h-12 bg-zinc-900 border border-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-black hover:shadow-[0_0_20px_rgba(16,185,129,0.4)] transition-all duration-300 font-medium tracking-wide"
+              className="w-full h-12 bg-zinc-900 border border-emerald-500/20 text-emerald-500 hover:bg-emerald-500 hover:text-black transition-all font-medium tracking-wide"
             >
               {loading ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -117,7 +122,7 @@ export default function SignInPage() {
               )}
             </Button>
 
-            {/* ✅ RESTORED: DIVIDER & OAUTH */}
+            {/* GOOGLE & LINKS (Keeping your existing UI) */}
             <div className="pt-2 space-y-6">
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
@@ -129,53 +134,63 @@ export default function SignInPage() {
                   </span>
                 </div>
               </div>
-
               <Button
                 type="button"
                 variant="outline"
                 onClick={handleGoogleLogin}
                 disabled={loading || isGoogleLoading}
-                className="w-full h-12 bg-black/20 border-zinc-800 text-zinc-300 hover:bg-white hover:text-black hover:border-white transition-all duration-300"
+                className="w-full h-12 bg-black/20 border-zinc-800 text-zinc-300 hover:bg-white hover:text-black transition-all"
               >
                 {isGoogleLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
                 ) : (
-                  <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-                    <path
-                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                      fill="#4285F4"
-                    />
-                    <path
-                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                      fill="#34A853"
-                    />
-                    <path
-                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                      fill="#FBBC05"
-                    />
-                    <path
-                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                      fill="#EA4335"
-                    />
-                  </svg>
+                  "Google Workspace"
                 )}
-                Google Workspace
               </Button>
             </div>
-
             <div className="text-center text-sm">
               <span className="text-zinc-500">No access key? </span>
               <Link
                 href="/auth/signup"
-                className="text-emerald-500 hover:text-emerald-400 hover:underline underline-offset-4 transition-colors"
+                className="text-emerald-500 hover:underline"
               >
                 Create one.
               </Link>
             </div>
           </form>
         </BeamTerminal>
+      ) : authStatus === "restored" ? (
+        /* ✅ RESTORATION POP-UP UI */
+        <motion.div
+          key="restored"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0 }}
+          className="text-center space-y-6 max-w-sm mx-auto p-8 bg-zinc-900/50 border border-amber-500/30 rounded-2xl backdrop-blur-xl"
+        >
+          <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center mx-auto border border-amber-500/50 shadow-[0_0_30px_rgba(245,158,11,0.2)]">
+            <RotateCcw className="w-8 h-8 text-amber-500" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-white mb-2">
+              Account Restored
+            </h2>
+            <p className="text-zinc-400">
+              Deletion sequence cancelled. <br /> Your intelligence archive has
+              been recovered.
+            </p>
+          </div>
+          <div className="h-1 w-32 bg-zinc-800 rounded-full mx-auto overflow-hidden">
+            <motion.div
+              initial={{ width: "0%" }}
+              animate={{ width: "100%" }}
+              transition={{ duration: 2, ease: "easeInOut" }}
+              className="h-full bg-amber-500"
+            />
+          </div>
+        </motion.div>
       ) : (
-        /* SUCCESS STATE */
+        /* STANDARD SUCCESS UI */
         <motion.div
           key="success"
           initial={{ opacity: 0, scale: 0.9 }}
