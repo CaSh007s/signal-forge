@@ -14,6 +14,9 @@ import {
   Download,
   Trash2,
   Check,
+  QrCode,
+  ShieldCheck,
+  ShieldAlert,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,8 +24,8 @@ import { supabase } from "@/lib/supabase";
 import { useUser } from "@/context/user-context";
 import { User as SupabaseUser } from "@supabase/supabase-js";
 import Image from "next/image";
+import QRCode from "qrcode";
 
-// CONFIGURATION
 const TABS = [
   { id: "profile", label: "Profile", icon: User },
   { id: "security", label: "Security", icon: Shield },
@@ -42,6 +45,12 @@ interface ProfileFormData {
   avatar_style: string;
 }
 
+// ✅ FIX: Strict Type for Factors
+interface MFAFactor {
+  id: string;
+  status: "verified" | "unverified";
+}
+
 export default function SettingsPage() {
   const router = useRouter();
   const { user, refreshUser } = useUser();
@@ -49,13 +58,11 @@ export default function SettingsPage() {
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Local state for editing form data
   const [formData, setFormData] = useState<ProfileFormData>({
     full_name: "",
     avatar_style: "shapes",
   });
 
-  // Sync global user data to local form state on load
   useEffect(() => {
     if (user) {
       setFormData({
@@ -72,9 +79,7 @@ export default function SettingsPage() {
 
   const handleSave = async () => {
     setIsSaving(true);
-
     try {
-      // 1. Update Profile Logic
       if (activeTab === "profile" && user) {
         const { error } = await supabase.auth.updateUser({
           data: {
@@ -85,10 +90,8 @@ export default function SettingsPage() {
         if (error) throw error;
       }
 
-      // 2. Refresh Global Context
       await refreshUser();
 
-      // 3. UX Feedback
       setTimeout(() => {
         setIsSaving(false);
         setHasChanges(false);
@@ -102,7 +105,6 @@ export default function SettingsPage() {
 
   return (
     <div className="max-w-5xl mx-auto min-h-[80vh] flex flex-col relative">
-      {/* 1. HEADER & TABS */}
       <div className="mb-12 space-y-8">
         <div>
           <h1 className="text-3xl font-light text-white tracking-tight">
@@ -113,7 +115,6 @@ export default function SettingsPage() {
           </p>
         </div>
 
-        {/* Floating Glass Tabs */}
         <div className="flex flex-wrap gap-2 p-1 bg-white/5 border border-white/5 rounded-2xl w-fit backdrop-blur-md">
           {TABS.map((tab) => (
             <button
@@ -141,7 +142,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* 2. DISSOLVING CONTENT AREA */}
       <div className="flex-1 relative">
         <AnimatePresence mode="wait">
           <motion.div
@@ -165,7 +165,6 @@ export default function SettingsPage() {
         </AnimatePresence>
       </div>
 
-      {/* 3. LATENT SAVE BUTTON */}
       <AnimatePresence>
         {hasChanges && (
           <motion.div
@@ -197,8 +196,6 @@ export default function SettingsPage() {
   );
 }
 
-// --- SECTIONS ---
-
 function SectionHeader({ title, desc }: { title: string; desc: string }) {
   return (
     <div className="mb-8 border-b border-white/5 pb-4">
@@ -225,7 +222,6 @@ function SettingsField({
   );
 }
 
-// 1. PROFILE TAB
 function ProfileSection({
   user,
   formData,
@@ -242,7 +238,6 @@ function ProfileSection({
         desc="Manage your digital presence within the network."
       />
 
-      {/* AVATAR SELECTOR */}
       <div className="space-y-4">
         <label className="text-xs font-mono text-zinc-500 uppercase tracking-wider">
           Avatar Signature
@@ -311,10 +306,31 @@ function ProfileSection({
   );
 }
 
-// 2. SECURITY SECTION
 function SecuritySection() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // 2FA State
+  const [isEnrolling, setIsEnrolling] = useState(false);
+  const [is2FAEnabled, setIs2FAEnabled] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState("");
+  const [verifyCode, setVerifyCode] = useState("");
+  const [factorId, setFactorId] = useState("");
+
+  // Check status on mount
+  useEffect(() => {
+    const checkStatus = async () => {
+      const { data } = await supabase.auth.mfa.listFactors();
+      const verified = data?.all?.find(
+        (f: MFAFactor) => f.status === "verified",
+      );
+      if (verified) {
+        setIs2FAEnabled(true);
+        setFactorId(verified.id);
+      }
+    };
+    checkStatus();
+  }, []);
 
   const handlePasswordUpdate = async () => {
     setLoading(true);
@@ -328,6 +344,66 @@ function SecuritySection() {
     }
   };
 
+  const onEnable2FA = async () => {
+    setIsEnrolling(true);
+    const { data, error } = await supabase.auth.mfa.enroll({
+      factorType: "totp",
+    });
+
+    if (error) {
+      alert(error.message);
+      setIsEnrolling(false);
+      return;
+    }
+
+    setFactorId(data.id);
+    const qr = await QRCode.toDataURL(data.totp.uri);
+    setQrCodeUrl(qr);
+  };
+
+  const onVerify2FA = async () => {
+    const { error } = await supabase.auth.mfa.challengeAndVerify({
+      factorId,
+      code: verifyCode,
+    });
+
+    if (error) {
+      alert("Invalid Code: " + error.message);
+    } else {
+      const { error: challengeError } = await supabase.auth.mfa.challenge({
+        factorId,
+      });
+      if (challengeError) {
+        alert(challengeError.message);
+        return;
+      }
+      alert(
+        "2FA Enabled Successfully! You will need this code to login next time.",
+      );
+      setIsEnrolling(false);
+      setIs2FAEnabled(true);
+      setQrCodeUrl("");
+      setVerifyCode("");
+    }
+  };
+
+  //Disable 2FA
+  const onDisable2FA = async () => {
+    const confirm = window.confirm(
+      "Are you sure you want to remove 2FA? This will lower your account security.",
+    );
+    if (!confirm) return;
+
+    const { error } = await supabase.auth.mfa.unenroll({ factorId });
+    if (error) {
+      alert("Error removing 2FA: " + error.message);
+    } else {
+      setIs2FAEnabled(false);
+      setFactorId("");
+      alert("2FA has been disabled.");
+    }
+  };
+
   return (
     <div className="space-y-8">
       <SectionHeader
@@ -335,18 +411,7 @@ function SecuritySection() {
         desc="Manage authentication layers and session integrity."
       />
 
-      <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-xl flex items-start gap-3">
-        <Shield className="w-5 h-5 text-emerald-500 mt-0.5" />
-        <div>
-          <h4 className="text-emerald-400 font-medium text-sm">
-            Environment Secure
-          </h4>
-          <p className="text-xs text-emerald-500/60 mt-1">
-            Encryption standards met. Session secured.
-          </p>
-        </div>
-      </div>
-
+      {/* PASSWORD ROTATION */}
       <div className="space-y-6">
         <SettingsField label="Rotate Access Key">
           <div className="flex gap-3">
@@ -371,26 +436,110 @@ function SecuritySection() {
             </Button>
           </div>
         </SettingsField>
+      </div>
 
-        <div className="flex items-center justify-between p-4 bg-zinc-900/30 border border-zinc-800 rounded-xl">
+      {/* 2FA ENROLLMENT */}
+      <div className="pt-6 border-t border-white/5 space-y-4">
+        <div
+          className={`flex items-center justify-between p-4 border rounded-xl transition-all ${is2FAEnabled ? "bg-emerald-500/5 border-emerald-500/20" : "bg-zinc-900/30 border-zinc-800"}`}
+        >
           <div className="space-y-1">
-            <span className="text-sm text-zinc-200">
-              Two-Factor Authentication
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-zinc-200 font-medium">
+                Two-Factor Authentication
+              </span>
+              {is2FAEnabled && (
+                <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-500/30 flex items-center gap-1">
+                  <ShieldCheck className="w-3 h-3" /> Active
+                </span>
+              )}
+            </div>
             <p className="text-xs text-zinc-500">
-              Additional authentication layer.
+              {is2FAEnabled
+                ? "Your account is secured with TOTP."
+                : "Add an extra layer of security."}
             </p>
           </div>
-          <div className="relative inline-flex h-6 w-11 items-center rounded-full bg-emerald-500/20 border border-emerald-500/50 cursor-pointer">
-            <span className="translate-x-6 inline-block h-3 w-3 transform rounded-full bg-emerald-500 shadow-md transition" />
-          </div>
+
+          {/* LOGIC: Show different buttons based on status */}
+          {is2FAEnabled ? (
+            <Button
+              onClick={onDisable2FA}
+              variant="outline"
+              className="border-red-500/20 text-red-400 hover:bg-red-500/10 hover:text-red-300 hover:border-red-500/50"
+            >
+              <ShieldAlert className="w-4 h-4 mr-2" /> Remove 2FA
+            </Button>
+          ) : !isEnrolling ? (
+            <Button
+              onClick={onEnable2FA}
+              variant="outline"
+              className="border-emerald-500/50 text-emerald-500 hover:bg-emerald-500 hover:text-black"
+            >
+              Enable 2FA
+            </Button>
+          ) : (
+            <Button
+              onClick={() => setIsEnrolling(false)}
+              variant="ghost"
+              className="text-zinc-500"
+            >
+              Cancel
+            </Button>
+          )}
         </div>
+
+        {/* QR REVEAL UI (Only when enrolling) */}
+        {isEnrolling && qrCodeUrl && !is2FAEnabled && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            className="p-6 border border-zinc-800 bg-black/20 rounded-xl space-y-6"
+          >
+            <div className="flex flex-col md:flex-row gap-8 items-center">
+              <div className="bg-white p-2 rounded-lg">
+                <Image
+                  src={qrCodeUrl}
+                  alt="2FA QR"
+                  width={160}
+                  height={160}
+                  unoptimized
+                />
+              </div>
+              <div className="space-y-4 flex-1">
+                <div className="flex items-center gap-2">
+                  <QrCode className="w-5 h-5 text-emerald-500" />
+                  <h4 className="text-white font-medium">Scan Verification</h4>
+                </div>
+                <p className="text-sm text-zinc-400">
+                  Use your authenticator app (Google Auth, Authy) to scan this
+                  code. Enter the 6-digit pin below to activate.
+                </p>
+                <div className="flex gap-3 max-w-sm">
+                  <Input
+                    placeholder="000 000"
+                    className="font-mono text-center tracking-widest text-lg bg-black/50 border-zinc-700 h-12"
+                    maxLength={6}
+                    value={verifyCode}
+                    onChange={(e) => setVerifyCode(e.target.value)}
+                  />
+                  <Button
+                    onClick={onVerify2FA}
+                    disabled={verifyCode.length < 6}
+                    className="h-12 bg-emerald-500 text-black font-bold px-6"
+                  >
+                    Verify
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
       </div>
     </div>
   );
 }
 
-// 3. DATA SECTION
 function DataSection({ user }: { user: SupabaseUser }) {
   const router = useRouter();
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -398,10 +547,8 @@ function DataSection({ user }: { user: SupabaseUser }) {
   const [loadingDelete, setLoadingDelete] = useState(false);
   const [loadingExport, setLoadingExport] = useState(false);
 
-  // LOGIC: Export Data
   const handleExport = async () => {
     setLoadingExport(true);
-
     const exportData = {
       identity: {
         id: user.id,
@@ -412,48 +559,37 @@ function DataSection({ user }: { user: SupabaseUser }) {
       archive: "No active reports found in session context.",
       timestamp: new Date().toISOString(),
     };
-
     const jsonString = JSON.stringify(exportData, null, 2);
     const blob = new Blob([jsonString], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-
     const link = document.createElement("a");
     link.href = url;
     link.download = `signalforge_archive_${user.id.slice(0, 8)}.json`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-
     setTimeout(() => setLoadingExport(false), 800);
   };
 
-  // LOGIC: Delete Account
   const handleDelete = async () => {
     if (!password) {
       alert("Please confirm your password.");
       return;
     }
     setLoadingDelete(true);
-
     try {
       const { error: authError } = await supabase.auth.signInWithPassword({
         email: user.email!,
         password: password,
       });
-
-      if (authError) {
-        throw new Error("Incorrect password. Deletion aborted.");
-      }
+      if (authError) throw new Error("Incorrect password. Deletion aborted.");
 
       const sevenDaysFromNow = new Date();
       sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
 
       const { error: updateError } = await supabase.auth.updateUser({
-        data: {
-          scheduled_for_deletion: sevenDaysFromNow.toISOString(),
-        },
+        data: { scheduled_for_deletion: sevenDaysFromNow.toISOString() },
       });
-
       if (updateError) throw updateError;
 
       await supabase.auth.signOut();
@@ -473,7 +609,6 @@ function DataSection({ user }: { user: SupabaseUser }) {
       />
 
       <div className="space-y-4">
-        {/* EXPORT BUTTON */}
         <Button
           onClick={handleExport}
           disabled={loadingExport}
@@ -488,10 +623,8 @@ function DataSection({ user }: { user: SupabaseUser }) {
           Export Intelligence Archive (JSON)
         </Button>
 
-        {/* DANGER ZONE */}
         <div className="pt-8 border-t border-white/5">
           <h4 className="text-red-400 font-medium mb-2">Danger Zone</h4>
-
           {!deleteConfirmOpen ? (
             <div className="p-4 border border-red-500/20 bg-red-500/5 rounded-xl space-y-4">
               <div className="flex gap-3">
@@ -526,7 +659,6 @@ function DataSection({ user }: { user: SupabaseUser }) {
                   simply log back in within 7 days.
                 </p>
               </div>
-
               <div className="space-y-3 pt-2">
                 <label className="text-xs font-mono text-zinc-500 uppercase tracking-wider">
                   Confirm Password
@@ -539,7 +671,6 @@ function DataSection({ user }: { user: SupabaseUser }) {
                   className="bg-black/40 border-red-900/50 focus:border-red-500/50 text-white"
                 />
               </div>
-
               <div className="flex gap-3 pt-2">
                 <Button
                   onClick={() => setDeleteConfirmOpen(false)}
