@@ -7,6 +7,9 @@ import {
 } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+// Note: If you have an AuthProvider, keep it.
+// If you are replacing it with UserProvider, you can remove it,
+// but based on your request I am generating the file exactly as is.
 import { AuthProvider } from "@/context/auth-context";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-ui" });

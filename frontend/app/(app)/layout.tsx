@@ -1,6 +1,7 @@
 "use client";
 
 import { SidebarProvider, useSidebar } from "@/context/sidebar-context";
+import { UserProvider } from "@/context/user-context"; // <--- Added Import
 import { LatentSidebar } from "@/components/layout/latent-sidebar";
 import { AppNavbar } from "@/components/layout/app-navbar";
 
@@ -34,8 +35,10 @@ function LayoutContent({ children }: { children: React.ReactNode }) {
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <SidebarProvider>
-      <LayoutContent>{children}</LayoutContent>
-    </SidebarProvider>
+    <UserProvider>
+      <SidebarProvider>
+        <LayoutContent>{children}</LayoutContent>
+      </SidebarProvider>
+    </UserProvider>
   );
 }

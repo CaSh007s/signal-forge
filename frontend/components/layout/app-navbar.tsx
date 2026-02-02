@@ -6,13 +6,16 @@ import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { User, LogOut, Settings, ChevronDown } from "lucide-react";
 import { useSidebar } from "@/context/sidebar-context";
-import { supabase } from "@/lib/supabase"; // Import Supabase for real logout
+import { supabase } from "@/lib/supabase";
+import Image from "next/image";
+import { useUser } from "@/context/user-context";
 
 export function AppNavbar() {
   const router = useRouter();
   const { isExpanded } = useSidebar();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { user, avatarUrl } = useUser();
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -69,15 +72,40 @@ export function AppNavbar() {
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`flex items-center gap-3 pl-1 pr-3 py-1 rounded-full border transition-all duration-300 group ${
+          className={`flex items-center gap-3 pl-1 pr-3 py-1 rounded-full border transition-all duration-300 group overflow-hidden ${
             isOpen
               ? "border-emerald-500/50 bg-zinc-900"
               : "border-transparent hover:border-zinc-800 hover:bg-white/5"
           }`}
         >
-          <div className="w-8 h-8 rounded-full bg-gradient-to-b from-zinc-800 to-zinc-900 flex items-center justify-center border border-zinc-700 group-hover:border-emerald-500/50 transition-colors shadow-inner">
-            <User className="w-4 h-4 text-zinc-400 group-hover:text-emerald-400 transition-colors" />
+          {/* Avatar Glyph */}
+          <div className="w-8 h-8 rounded-full bg-zinc-900 flex items-center justify-center border border-zinc-700 group-hover:border-emerald-500/50 transition-colors shadow-inner overflow-hidden relative shrink-0">
+            {user ? (
+              <Image
+                src={avatarUrl}
+                alt="Profile"
+                width={32}
+                height={32}
+                className="w-full h-full object-cover"
+                unoptimized
+              />
+            ) : (
+              <User className="w-4 h-4 text-zinc-400 group-hover:text-emerald-400 transition-colors" />
+            )}
           </div>
+
+          {/* First Name Reveal */}
+          {user?.user_metadata?.full_name && (
+            <div className="max-w-0 opacity-0 group-hover:max-w-[100px] group-hover:opacity-100 transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] whitespace-nowrap overflow-hidden">
+              <span className="text-sm text-zinc-300 font-medium pl-1 pr-2">
+                {user.user_metadata.full_name.split(" ")[0]}
+              </span>
+            </div>
+          )}
+
+          <ChevronDown
+            className={`w-3 h-3 text-zinc-500 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`}
+          />
         </button>
 
         <AnimatePresence>

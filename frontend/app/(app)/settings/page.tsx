@@ -15,16 +15,17 @@ import {
   Moon,
   Sun,
   Check,
-  RefreshCw,
   Loader2,
+  Key,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
+import { useUser } from "@/context/user-context"; // Global Context
+import { User as SupabaseUser } from "@supabase/supabase-js"; // Type Alias
 import Image from "next/image";
-import { User as SupabaseUser } from "@supabase/supabase-js";
 
-// --- TABS CONFIG ---
+// --- CONFIGURATION ---
 const TABS = [
   { id: "profile", label: "Profile", icon: User },
   { id: "security", label: "Security", icon: Shield },
@@ -34,57 +35,75 @@ const TABS = [
   { id: "data", label: "Data & Privacy", icon: Database },
 ];
 
+const AVATAR_STYLES = [
+  { id: "shapes", label: "Abstract" },
+  { id: "bottts", label: "Robots" },
+  { id: "identicon", label: "Geometric" },
+  { id: "avataaars", label: "Humans" },
+  { id: "icons", label: "Symbols" },
+];
+
+interface ProfileFormData {
+  full_name: string;
+  avatar_style: string;
+}
+
 export default function SettingsPage() {
   const router = useRouter();
+  const { user, refreshUser } = useUser(); // Use Global Context
   const [activeTab, setActiveTab] = useState("profile");
   const [hasChanges, setHasChanges] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  // Real User State
-  const [user, setUser] = useState<SupabaseUser | null>(null);
+  // Local state for editing form data
+  const [formData, setFormData] = useState<ProfileFormData>({
+    full_name: "",
+    avatar_style: "shapes",
+  });
 
+  // Sync global user data to local form state on load
   useEffect(() => {
-    const getUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user) setUser(user);
-    };
-    getUser();
-  }, []);
+    if (user) {
+      setFormData({
+        full_name: user.user_metadata?.full_name || "",
+        avatar_style: user.user_metadata?.avatar_style || "shapes",
+      });
+    }
+  }, [user]);
 
-  const handleInputChange = () => {
+  const handleInputChange = (field: keyof ProfileFormData, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
     setHasChanges(true);
   };
 
-  // ✅ NEW: Real Save Logic
   const handleSave = async () => {
     setIsSaving(true);
 
-    // Check if we are saving profile data
-    if (user) {
-      const updates = {
-        data: {
-          full_name: user.user_metadata.full_name,
-          avatar_style: user.user_metadata.avatar_style || "shapes",
-        },
-      };
-
-      const { error } = await supabase.auth.updateUser(updates);
-
-      if (error) {
-        alert("Error saving: " + error.message);
-        setIsSaving(false);
-        return;
+    try {
+      // 1. Update Profile Logic
+      if (activeTab === "profile" && user) {
+        const { error } = await supabase.auth.updateUser({
+          data: {
+            full_name: formData.full_name,
+            avatar_style: formData.avatar_style,
+          },
+        });
+        if (error) throw error;
       }
-    }
 
-    // Simulate success delay for UX
-    setTimeout(() => {
+      // 2. Refresh Global Context (Updates Navbar instantly)
+      await refreshUser();
+
+      // 3. UX Feedback
+      setTimeout(() => {
+        setIsSaving(false);
+        setHasChanges(false);
+        router.refresh();
+      }, 800);
+    } catch (error) {
+      alert("Calibration Failed: " + (error as Error).message);
       setIsSaving(false);
-      setHasChanges(false);
-      router.refresh(); // Refresh to update navbar name
-    }, 1000);
+    }
   };
 
   return (
@@ -139,30 +158,25 @@ export default function SettingsPage() {
             transition={{ duration: 0.4 }}
             className="w-full max-w-2xl"
           >
-            {/* ✅ UPDATED: Pass real user props to Profile */}
-            {activeTab === "profile" && (
+            {activeTab === "profile" && user && (
               <ProfileSection
                 user={user}
-                setUser={setUser}
+                formData={formData}
                 onChange={handleInputChange}
               />
             )}
-
-            {/* Keeping other sections exactly as they were */}
-            {activeTab === "security" && (
-              <SecuritySection onChange={handleInputChange} />
-            )}
+            {activeTab === "security" && <SecuritySection />}
             {activeTab === "preferences" && (
-              <PreferencesSection onChange={handleInputChange} />
+              <PreferencesSection onChange={() => setHasChanges(true)} />
             )}
             {activeTab === "appearance" && (
-              <AppearanceSection onChange={handleInputChange} />
+              <AppearanceSection onChange={() => setHasChanges(true)} />
             )}
             {activeTab === "workspace" && (
-              <WorkspaceSection onChange={handleInputChange} />
+              <WorkspaceSection onChange={() => setHasChanges(true)} />
             )}
             {activeTab === "data" && (
-              <DataSection onChange={handleInputChange} />
+              <DataSection onChange={() => setHasChanges(true)} />
             )}
           </motion.div>
         </AnimatePresence>
@@ -228,41 +242,16 @@ function SettingsField({
   );
 }
 
-// 1. PROFILE TAB
+// 1. PROFILE TAB (FULLY FUNCTIONAL)
 function ProfileSection({
   user,
-  setUser,
+  formData,
   onChange,
 }: {
-  user: SupabaseUser | null;
-  setUser: React.Dispatch<React.SetStateAction<SupabaseUser | null>>;
-  onChange: () => void;
+  user: SupabaseUser;
+  formData: ProfileFormData;
+  onChange: (field: keyof ProfileFormData, value: string) => void;
 }) {
-  // Guard clause if user hasn't loaded yet
-  if (!user)
-    return <div className="text-zinc-500">Loading identity protocol...</div>;
-
-  // DiceBear Logic
-  const avatarStyle = user.user_metadata?.avatar_style || "shapes";
-  const avatarUrl = `https://api.dicebear.com/7.x/${avatarStyle}/svg?seed=${user.id}&backgroundColor=09090b`;
-
-  const cycleAvatar = () => {
-    const newStyle = avatarStyle === "shapes" ? "identicon" : "shapes";
-    setUser({
-      ...user,
-      user_metadata: { ...user.user_metadata, avatar_style: newStyle },
-    });
-    onChange();
-  };
-
-  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setUser({
-      ...user,
-      user_metadata: { ...user.user_metadata, full_name: e.target.value },
-    });
-    onChange();
-  };
-
   return (
     <div className="space-y-8">
       <SectionHeader
@@ -270,61 +259,92 @@ function ProfileSection({
         desc="Manage your digital presence within the network."
       />
 
-      <div className="flex items-center gap-6">
-        {/* Functional Avatar */}
-        <div className="relative group">
-          <div className="w-24 h-24 rounded-full bg-zinc-900 border border-zinc-800 overflow-hidden relative shadow-[0_0_30px_rgba(16,185,129,0.1)]">
-            <Image
-              src={avatarUrl}
-              alt="Avatar"
-              width={96}
-              height={96}
-              className="w-full h-full object-cover"
-              unoptimized // Needed for external SVG URLs usually
-            />
-          </div>
-          {/* Reroll Button */}
-          <button
-            onClick={cycleAvatar}
-            className="absolute bottom-0 right-0 p-2 rounded-full bg-zinc-800 border border-zinc-700 text-zinc-400 hover:text-emerald-400 hover:border-emerald-500/50 transition-all shadow-lg"
-          >
-            <RefreshCw className="w-3 h-3" />
-          </button>
-        </div>
-
-        <div className="space-y-1">
-          <h3 className="text-white font-medium">User Avatar</h3>
-          <p className="text-sm text-zinc-500">
-            Procedurally generated from UID.
-          </p>
+      {/* AVATAR SELECTOR */}
+      <div className="space-y-4">
+        <label className="text-xs font-mono text-zinc-500 uppercase tracking-wider">
+          Avatar Signature
+        </label>
+        <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+          {AVATAR_STYLES.map((style) => {
+            const isActive = formData.avatar_style === style.id;
+            const url = `https://api.dicebear.com/9.x/${style.id}/svg?seed=${user.id}&backgroundColor=09090b`;
+            return (
+              <button
+                key={style.id}
+                onClick={() => onChange("avatar_style", style.id)}
+                className={`relative flex-shrink-0 w-24 h-24 rounded-2xl border-2 transition-all overflow-hidden group ${
+                  isActive
+                    ? "border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.3)] scale-105 bg-emerald-500/10"
+                    : "border-zinc-800 opacity-60 hover:opacity-100 hover:border-zinc-600 bg-black/20"
+                }`}
+              >
+                <div className="absolute inset-0 p-2">
+                  <Image
+                    src={url}
+                    alt={style.label}
+                    width={96}
+                    height={96}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    unoptimized
+                  />
+                </div>
+                <div className="absolute bottom-0 inset-x-0 bg-black/80 text-[10px] text-center py-1.5 text-zinc-300 font-medium backdrop-blur-md border-t border-white/5">
+                  {style.label}
+                </div>
+                {isActive && (
+                  <div className="absolute top-2 right-2 w-4 h-4 bg-emerald-500 rounded-full flex items-center justify-center text-black shadow-lg">
+                    <Check className="w-2.5 h-2.5 stroke-[3px]" />
+                  </div>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       <div className="grid gap-6">
         <SettingsField label="Display Name">
           <Input
-            value={user.user_metadata?.full_name || ""}
-            onChange={handleNameChange}
+            value={formData.full_name}
+            onChange={(e) => onChange("full_name", e.target.value)}
             placeholder="e.g. Cipher One"
             className="bg-black/20 border-zinc-800 focus:border-emerald-500/50 h-12 text-white"
           />
         </SettingsField>
 
-        {/* Read Only Email */}
         <SettingsField label="Internal ID (Immutable)">
           <Input
             value={user.email || ""}
             readOnly
             className="bg-black/20 border-zinc-800 text-zinc-500 h-12 cursor-not-allowed"
           />
+          <div className="flex items-center gap-2 text-[10px] text-zinc-600 mt-1">
+            <Shield className="w-3 h-3" />
+            <span>Identity locked by administrator protocol.</span>
+          </div>
         </SettingsField>
       </div>
     </div>
   );
 }
 
-// 2. SECURITY TAB (Mock UI preserved)
-function SecuritySection({ onChange }: { onChange: () => void }) {
+// 2. SECURITY TAB (FUNCTIONAL PASSWORD UPDATE)
+function SecuritySection() {
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handlePasswordUpdate = async () => {
+    setLoading(true);
+    const { error } = await supabase.auth.updateUser({ password: password });
+    setLoading(false);
+    if (error) {
+      alert("Security Error: " + error.message);
+    } else {
+      alert("Protocol Updated: Password changed successfully.");
+      setPassword("");
+    }
+  };
+
   return (
     <div className="space-y-8">
       <SectionHeader
@@ -339,20 +359,34 @@ function SecuritySection({ onChange }: { onChange: () => void }) {
             Environment Secure
           </h4>
           <p className="text-xs text-emerald-500/60 mt-1">
-            2FA is active. Encryption standards met.
+            Encryption standards met. Session secured.
           </p>
         </div>
       </div>
 
       <div className="space-y-6">
-        <SettingsField label="Password">
-          <Button
-            variant="outline"
-            className="w-full justify-between h-12 bg-black/20 border-zinc-800 hover:bg-zinc-900 hover:text-white"
-          >
-            <span>••••••••••••••••</span>
-            <span className="text-xs text-zinc-500">Last changed 30d ago</span>
-          </Button>
+        <SettingsField label="Rotate Access Key">
+          <div className="flex gap-3">
+            <Input
+              type="password"
+              placeholder="Enter new master password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="bg-black/20 border-zinc-800 focus:border-emerald-500/50 text-white h-12"
+            />
+            <Button
+              onClick={handlePasswordUpdate}
+              disabled={!password || loading}
+              className="h-12 px-6 bg-zinc-800 hover:bg-emerald-600 hover:text-white text-zinc-300 border border-zinc-700 hover:border-emerald-500 transition-all"
+            >
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Key className="w-4 h-4 mr-2" />
+              )}
+              {loading ? "Updating..." : "Update Key"}
+            </Button>
+          </div>
         </SettingsField>
 
         <div className="flex items-center justify-between p-4 bg-zinc-900/30 border border-zinc-800 rounded-xl">
@@ -361,11 +395,11 @@ function SecuritySection({ onChange }: { onChange: () => void }) {
               Two-Factor Authentication
             </span>
             <p className="text-xs text-zinc-500">
-              Additional authentication layer active.
+              Additional authentication layer.
             </p>
           </div>
-          <div className="relative inline-flex h-6 w-11 items-center rounded-full bg-emerald-500 cursor-pointer">
-            <span className="translate-x-6 inline-block h-4 w-4 transform rounded-full bg-white transition" />
+          <div className="relative inline-flex h-6 w-11 items-center rounded-full bg-emerald-500/20 border border-emerald-500/50 cursor-pointer">
+            <span className="translate-x-6 inline-block h-3 w-3 transform rounded-full bg-emerald-500 shadow-md transition" />
           </div>
         </div>
       </div>
@@ -373,7 +407,7 @@ function SecuritySection({ onChange }: { onChange: () => void }) {
   );
 }
 
-// 3. PREFERENCES TAB (Mock UI preserved)
+// 3. PREFERENCES TAB (Mock UI)
 function PreferencesSection({ onChange }: { onChange: () => void }) {
   return (
     <div className="space-y-8">
@@ -422,7 +456,7 @@ function PreferencesSection({ onChange }: { onChange: () => void }) {
   );
 }
 
-// 4. APPEARANCE TAB (Mock UI preserved)
+// 4. APPEARANCE TAB (Mock UI)
 function AppearanceSection({ onChange }: { onChange: () => void }) {
   return (
     <div className="space-y-8">
@@ -432,7 +466,6 @@ function AppearanceSection({ onChange }: { onChange: () => void }) {
       />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* THEME 1: SIGNAL (Dark) */}
         <div
           onClick={onChange}
           className="group cursor-pointer relative aspect-video rounded-2xl bg-[#09090b] border-2 border-emerald-500 overflow-hidden shadow-[0_0_30px_rgba(16,185,129,0.1)]"
@@ -458,10 +491,9 @@ function AppearanceSection({ onChange }: { onChange: () => void }) {
           </div>
         </div>
 
-        {/* THEME 2: VIOLET (Light) */}
         <div
           onClick={onChange}
-          className="group cursor-pointer relative aspect-video rounded-2xl bg-zinc-100 border-2 border-transparent hover:border-purple-400 overflow-hidden transition-all"
+          className="group cursor-pointer relative aspect-video rounded-2xl bg-zinc-100 border-2 border-transparent hover:border-purple-400 overflow-hidden transition-all opacity-50 grayscale hover:grayscale-0 hover:opacity-100"
         >
           <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:20px_20px] opacity-50" />
           <div className="absolute inset-0 flex items-center justify-center">
@@ -480,7 +512,7 @@ function AppearanceSection({ onChange }: { onChange: () => void }) {
   );
 }
 
-// 5. WORKSPACE TAB (Mock UI preserved)
+// 5. WORKSPACE TAB (Mock UI)
 function WorkspaceSection({ onChange }: { onChange: () => void }) {
   return (
     <div className="space-y-8">
@@ -515,7 +547,7 @@ function WorkspaceSection({ onChange }: { onChange: () => void }) {
   );
 }
 
-// 6. DATA TAB (Mock UI preserved)
+// 6. DATA TAB (Mock UI)
 function DataSection({ onChange }: { onChange: () => void }) {
   return (
     <div className="space-y-8">
