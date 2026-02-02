@@ -134,33 +134,66 @@ export default function AgentPage() {
 
   const handleDownloadPDF = async () => {
     if (!report) return;
-
     const element = document.getElementById("report-content");
     if (!element) return;
 
     setDownloading(true);
 
     try {
-      // 1. Capture the element as a high-res PNG
-      const dataUrl = await toPng(element, { quality: 0.95, pixelRatio: 2 });
-
-      // 2. Initialize PDF
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "mm",
-        format: "a4",
+      // 1. Capture High-Res Image
+      const dataUrl = await toPng(element, {
+        quality: 1.0,
+        pixelRatio: 2,
+        backgroundColor: "#ffffff",
+        style: {
+          color: "#000000",
+          fontFamily: "Georgia, serif",
+          padding: "40px",
+        },
       });
 
-      // 3. Calculate dimensions to fit A4 page
-      const imgProps = pdf.getImageProperties(dataUrl);
+      // 2. Setup PDF Stats
+      const pdf = new jsPDF("p", "mm", "a4");
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      const pdfHeight = pdf.internal.pageSize.getHeight();
 
-      // 4. Add image and save
-      pdf.addImage(dataUrl, "PNG", 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`${report.title}_SignalForge_Report.pdf`);
+      const imgProps = pdf.getImageProperties(dataUrl);
+      const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      // 3. Page 1 Header
+      pdf.setFont("helvetica", "bold");
+      pdf.setFontSize(18);
+      pdf.text("SignalForge Intelligence", 10, 15);
+
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(10);
+      pdf.setTextColor(100);
+      pdf.text(
+        `Report: ${report.title.toUpperCase()} // ${new Date().toLocaleDateString()}`,
+        10,
+        22,
+      );
+
+      // 4. Add Content
+      let heightLeft = imgHeight;
+      let position = 30;
+
+      // Add first page content
+      pdf.addImage(dataUrl, "PNG", 0, position, pdfWidth, imgHeight);
+      heightLeft -= pdfHeight - position; // Subtract usable space on pg 1
+
+      // Add subsequent pages
+      while (heightLeft > 0) {
+        position -= pdfHeight;
+        pdf.addPage();
+        pdf.addImage(dataUrl, "PNG", 0, position, pdfWidth, imgHeight);
+        heightLeft -= pdfHeight;
+      }
+
+      pdf.save(`${report.title}_Analysis.pdf`);
     } catch (error) {
-      console.error("PDF generation failed:", error);
+      console.error("PDF Generation Error:", error);
+      alert("Failed to generate PDF. Please try again.");
     } finally {
       setDownloading(false);
     }
@@ -277,7 +310,7 @@ export default function AgentPage() {
               <Button
                 variant="outline"
                 size="sm"
-                className="bg-zinc-900 border-zinc-700 text-zinc-300 hover:text-white"
+                className="bg-emerald-500 text-black hover:bg-emerald-400 font-medium"
                 onClick={handleDownloadPDF}
                 disabled={downloading}
               >
@@ -286,16 +319,17 @@ export default function AgentPage() {
                 ) : (
                   <Download className="h-4 w-4 mr-2" />
                 )}
-                PDF
+                Download Report
               </Button>
             </div>
           </div>
 
-          {/* REPORT CONTENT WRAPPER (ID for PDF Generation) */}
+          {/* REPORT CONTENT WRAPPER */}
+          {/* We use specific text colors here that work in Dark Mode but get overridden in PDF generation */}
           <div id="report-content" className="bg-bg p-4 rounded-xl">
             {/* STOCK CHART SECTION */}
             {report.chartData && report.chartData.history && (
-              <div className="mt-6 mb-8">
+              <div className="mt-6 mb-8 p-4 bg-zinc-900/50 rounded-lg border border-zinc-800">
                 <StockChart
                   data={report.chartData.history}
                   currency={report.chartData.currency}

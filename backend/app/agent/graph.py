@@ -1,27 +1,49 @@
 from typing import Literal
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.messages import SystemMessage
 from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolNode
 from app.agent.state import AgentState
 from app.agent.tools import tools
 import os
 
-# 1. Initialize the Model
+# --- 1. CONFIGURATION ---
+SYSTEM_PROMPT = """You are a Senior Investment Analyst at a top-tier hedge fund. 
+Your goal is to produce a comprehensive, data-driven "Investment Memorandum" for the requested asset.
+
+**STRUCTURE OF YOUR REPORT:**
+1.  **Executive Verdict:** (Bullish/Bearish/Neutral) + High conviction one-liner.
+2.  **The Catalyst:** What specifically is driving the price right now? (Earnings, Macro, Product).
+3.  **Financial Health:** Key metrics (P/E, Revenue Growth, Cash Flow) compared to peers.
+4.  **Key Risks:** What could go wrong? (Geopolitics, Supply Chain, Valuation).
+5.  **Forward Outlook:** A prediction for the next quarter.
+
+**TONE & STYLE:**
+* Be professional, concise, and decisive.
+* Use financial terminology correctly (e.g., "YoY", "EBITDA", "Headwinds").
+* Do NOT hedge your words ("it might go up"). Make a call based on the data.
+* Format with clear Markdown headers (##), bolding (**), and bullet points.
+"""
+
+# Initialize Model
 if not os.getenv("GOOGLE_API_KEY"):
     print("⚠️ WARNING: GOOGLE_API_KEY not found in .env")
 
-model = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
-
-# Bind the tools to the model
+model = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.2)
 model_with_tools = model.bind_tools(tools)
 
-# 2. Define the Nodes
+# --- 2. NODES ---
 
 def agent_node(state: AgentState):
     """
     The Brain: Decides whether to call a tool or answer the user.
     """
     messages = state["messages"]
+    
+    # Inject System Prompt if it's the first turn
+    if not isinstance(messages[0], SystemMessage):
+        messages.insert(0, SystemMessage(content=SYSTEM_PROMPT))
+    
     response = model_with_tools.invoke(messages)
     return {"messages": [response]}
 
@@ -35,17 +57,14 @@ def should_continue(state: AgentState) -> Literal["tools", "__end__"]:
     if last_message.tool_calls:
         return "tools"
     
-    # Otherwise, stop
     return "__end__"
 
-# 3. Build the Graph
+# --- 3. GRAPH BUILD ---
 workflow = StateGraph(AgentState)
 
-# Define Nodes
 workflow.add_node("agent", agent_node)
 workflow.add_node("tools", ToolNode(tools))
 
-# Define Edges
 workflow.set_entry_point("agent")
 
 workflow.add_conditional_edges(
@@ -54,5 +73,4 @@ workflow.add_conditional_edges(
 )
 workflow.add_edge("tools", "agent")
 
-# 4. Compile the Application
 app = workflow.compile()
