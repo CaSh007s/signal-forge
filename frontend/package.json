@@ -13,6 +13,7 @@
     "@radix-ui/react-scroll-area": "^1.2.10",
     "@radix-ui/react-separator": "^1.1.8",
     "@radix-ui/react-slot": "^1.2.4",
+    "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.93.3",
     "@types/qrcode": "^1.5.6",
     "class-variance-authority": "^0.7.1",
