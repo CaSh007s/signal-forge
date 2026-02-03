@@ -100,7 +100,10 @@ export default function AgentPage() {
       const token = await getToken();
       if (!token) throw new Error("Authentication failed");
 
-      const res = await fetch("http://127.0.0.1:8000/api/analyze", {
+      const API_URL =
+        process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
+      const res = await fetch(`${API_URL}/api/analyze`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
