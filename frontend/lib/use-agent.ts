@@ -10,6 +10,7 @@ export function useAgent() {
   const [messages, setMessages] = useState<string[]>([]);
   const [report, setReport] = useState<string>("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
   const startResearch = async (company: string) => {
     setMessages([]);
@@ -19,7 +20,7 @@ export function useAgent() {
 
     try {
       const token = localStorage.getItem("signalforge_token");
-      const response = await fetch("http://127.0.0.1:8000/api/agent/research", {
+      const response = await fetch(`${API_URL}/api/agent/research`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -37,6 +37,7 @@ export default function DashboardPage() {
   const [reports, setReports] = useState<Report[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
   useEffect(() => {
     const fetchReports = async () => {
@@ -52,7 +53,7 @@ export default function DashboardPage() {
         const token = await getToken();
         if (!token) return;
 
-        const res = await fetch("http://127.0.0.1:8000/api/reports", {
+        const res = await fetch(`${API_URL}/api/reports`, {
           headers: { Authorization: `Bearer ${token}` },
         });
 
@@ -83,7 +84,7 @@ export default function DashboardPage() {
     try {
       const token = await getToken();
       if (token) {
-        await fetch(`http://127.0.0.1:8000/api/reports/${id}`, {
+        await fetch(`${API_URL}/api/reports/${id}`, {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
         });

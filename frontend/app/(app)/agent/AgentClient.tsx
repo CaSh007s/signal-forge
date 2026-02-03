@@ -43,7 +43,7 @@ export default function AgentPage() {
   const [report, setReport] = useState<ReportState | null>(null);
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
-
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
   const logsEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -60,7 +60,7 @@ export default function AgentPage() {
       const token = await getToken();
       if (!token) return;
 
-      const res = await fetch(`http://127.0.0.1:8000/api/reports/${id}`, {
+      const res = await fetch(`${API_URL}/api/reports/${id}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
@@ -99,9 +99,6 @@ export default function AgentPage() {
     try {
       const token = await getToken();
       if (!token) throw new Error("Authentication failed");
-
-      const API_URL =
-        process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
       const res = await fetch(`${API_URL}/api/analyze`, {
         method: "POST",
