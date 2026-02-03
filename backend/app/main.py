@@ -38,17 +38,22 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="SignalForge API", version="0.1.0", lifespan=lifespan)
 
+# CORS Settings
+origins = [
+    "http://localhost:3000",                      # For local development
+    "https://signalforge-oo7s.vercel.app",          
+]
+
 # CORS Middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 # Connect Routes
-# Note: Prefixes are important for frontend matching
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
 app.include_router(endpoints.router, prefix="/api", tags=["agent"])
 app.include_router(reports.router, prefix="/api/reports", tags=["reports"])
