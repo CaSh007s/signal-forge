@@ -72,7 +72,7 @@ export function StockChart({ data, currency = "USD" }: StockChartProps) {
             tick={{ fontSize: 12 }}
             tickLine={false}
             axisLine={false}
-            tickFormatter={(val) => `$${val}`}
+            tickFormatter={(number) => number.toFixed(2)}
             width={60}
           />
 

@@ -20,6 +20,7 @@ import { StockChart } from "@/components/stock-chart";
 import { toPng } from "html-to-image";
 import { jsPDF } from "jspdf";
 
+// --- TYPES ---
 interface ChartData {
   symbol: string;
   currency: string;
@@ -45,23 +46,18 @@ export default function AgentPage() {
 
   const logsEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll logs
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
-  // Load existing report if ID is present
   useEffect(() => {
-    if (reportId) {
-      fetchReport(reportId);
-    }
+    if (reportId) fetchReport(reportId);
   }, [reportId]);
 
   const fetchReport = async (id: string) => {
     setLoading(true);
     try {
       const token = await getToken();
-
       if (!token) return;
 
       const res = await fetch(`http://127.0.0.1:8000/api/reports/${id}`, {
@@ -102,10 +98,7 @@ export default function AgentPage() {
 
     try {
       const token = await getToken();
-
-      if (!token) {
-        throw new Error("Authentication failed");
-      }
+      if (!token) throw new Error("Authentication failed");
 
       const res = await fetch("http://127.0.0.1:8000/api/analyze", {
         method: "POST",
@@ -143,6 +136,7 @@ export default function AgentPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // --- PDF GENERATOR ---
   const handleDownloadPDF = async () => {
     if (!report) return;
     const element = document.getElementById("print-content");
@@ -151,8 +145,8 @@ export default function AgentPage() {
     setDownloading(true);
 
     try {
-      // 1. Temporarily make it visible to capture
-      element.style.display = "block";
+      await document.fonts.ready;
+      await new Promise((resolve) => setTimeout(resolve, 1500));
 
       const dataUrl = await toPng(element, {
         quality: 1.0,
@@ -160,54 +154,82 @@ export default function AgentPage() {
         backgroundColor: "#ffffff",
       });
 
-      // Hide it again immediately
-      element.style.display = "none";
-
-      // 2. Setup PDF Stats
       const pdf = new jsPDF("p", "mm", "a4");
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
       const imgProps = pdf.getImageProperties(dataUrl);
-      const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      const imgHeight = (imgProps.height * pageWidth) / imgProps.width;
 
-      // 3. Page 1 Header
-      pdf.setFont("helvetica", "bold");
-      pdf.setFontSize(18);
-      pdf.text("SignalForge Intelligence", 10, 15);
+      // --- MARGIN SETTINGS ---
+      const TOP_MARGIN = 20;
+      const BOTTOM_MARGIN = 25;
 
-      pdf.setFont("helvetica", "normal");
-      pdf.setFontSize(10);
-      pdf.setTextColor(100);
-      pdf.text(
-        `Report: ${report.title.toUpperCase()} // ${new Date().toLocaleDateString()}`,
-        10,
-        22,
-      );
+      // We can only fit less content now because we have margins on both ends
+      const USABLE_HEIGHT = pageHeight - TOP_MARGIN - BOTTOM_MARGIN;
 
-      // 4. Add Content
       let heightLeft = imgHeight;
-      let position = 30;
+      let position = 0; // Internal position tracking of the source image
+      let page = 1;
 
-      // Add first page content
-      pdf.addImage(dataUrl, "PNG", 0, position, pdfWidth, imgHeight);
-      heightLeft -= pdfHeight - position;
+      // --- PAGE 1 ---
+      pdf.addImage(
+        dataUrl,
+        "PNG",
+        0,
+        position + TOP_MARGIN,
+        pageWidth,
+        imgHeight,
+      );
+      addFooter(pdf, page);
 
-      // Add subsequent pages
+      heightLeft -= USABLE_HEIGHT;
+      position -= USABLE_HEIGHT; // Move the "camera" down the long image
+
+      // --- SUBSEQUENT PAGES ---
       while (heightLeft > 0) {
-        position -= pdfHeight;
+        page++;
         pdf.addPage();
-        pdf.addImage(dataUrl, "PNG", 0, position, pdfWidth, imgHeight);
-        heightLeft -= pdfHeight;
+        pdf.addImage(
+          dataUrl,
+          "PNG",
+          0,
+          position + TOP_MARGIN,
+          pageWidth,
+          imgHeight,
+        );
+        pdf.setFillColor(255, 255, 255);
+        pdf.rect(0, 0, pageWidth, TOP_MARGIN, "F");
+
+        addFooter(pdf, page);
+
+        heightLeft -= USABLE_HEIGHT;
+        position -= USABLE_HEIGHT;
       }
 
-      pdf.save(`${report.title}_Analysis.pdf`);
+      pdf.save(`SignalForge_Brief_${report.title}.pdf`);
     } catch (error) {
-      console.error("PDF Generation Error:", error);
-      alert("Failed to generate PDF. Please try again.");
+      console.error("PDF Error:", error);
+      alert("PDF Generation failed.");
     } finally {
       setDownloading(false);
     }
+  };
+
+  const addFooter = (pdf: jsPDF, pageNum: number) => {
+    pdf.setFillColor(255, 255, 255);
+    pdf.rect(0, 275, 210, 22, "F");
+
+    pdf.setFont("helvetica", "normal");
+    pdf.setFontSize(8);
+    pdf.setTextColor(107, 114, 128);
+
+    // Draw Divider Line
+    pdf.setDrawColor(229, 231, 235); // Light Gray
+    pdf.line(15, 280, 195, 280);
+
+    // Text
+    pdf.text("SignalForge Intelligence • Confidential Research", 15, 288);
+    pdf.text(`Page ${pageNum}`, 195, 288, { align: "right" });
   };
 
   return (
@@ -285,10 +307,10 @@ export default function AgentPage() {
         </div>
       )}
 
-      {/* 3. THE REPORT VIEW */}
+      {/* 3. REPORT VIEW */}
       {report && !loading && (
         <div className="animate-slide-up space-y-6">
-          {/* STICKY HEADER */}
+          {/* HEADER (Dark Mode) */}
           <div className="sticky top-0 z-10 bg-zinc-950/80 backdrop-blur-md border-b border-zinc-800 py-4 -mx-4 px-4 md:-mx-8 md:px-8 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="h-10 w-10 bg-emerald-500/10 rounded-lg flex items-center justify-center border border-emerald-500/20">
@@ -335,30 +357,157 @@ export default function AgentPage() {
             </div>
           </div>
 
-          {/* HIDDEN PRINT CONTAINER 
-            This is what gets screenshotted for the PDF. 
-            It mimics a "White Paper" look.
+          {/* ================================================================
+            THE INSTITUTIONAL BRIEF (Stealth Render)
+            ================================================================
           */}
-          <div
-            id="print-content"
-            className="fixed top-0 left-0 -z-50 w-[800px] bg-white text-black p-12 hidden"
-          >
-            <h1 className="text-4xl font-bold mb-2 text-black">
-              {report.title}
-            </h1>
-            <p className="text-gray-500 mb-8 border-b pb-4">
-              SignalForge Intelligence Report //{" "}
-              {new Date().toLocaleDateString()}
-            </p>
+          <div className="overflow-hidden h-0 w-0">
+            <div
+              id="print-content"
+              style={{
+                position: "relative",
+                width: "794px",
+                minHeight: "1123px",
+                padding: "40px 60px",
+                backgroundColor: "white",
+                color: "black",
+                fontFamily: "serif",
+              }}
+            >
+              {/* Load Fonts & FORCE GRAPH COLORS */}
+              <style
+                dangerouslySetInnerHTML={{
+                  __html: `
+                @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Serif:wght@400;600&display=swap');
+                
+                #print-content svg path, 
+                #print-content svg line,
+                #print-content svg rect {
+                  stroke: #374151 !important;
+                }
+                #print-content svg text {
+                  fill: #111827 !important;
+                }
+              `,
+                }}
+              />
 
-            <div className="prose max-w-none text-black">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {report.content}
-              </ReactMarkdown>
+              {/* HEADER */}
+              <div className="mb-8 border-b border-gray-300 pb-6">
+                <div className="flex justify-between items-end mb-2">
+                  <h1
+                    style={{
+                      fontFamily: "'IBM Plex Sans', sans-serif",
+                      fontSize: "24pt",
+                      fontWeight: "600",
+                      color: "#111827",
+                      lineHeight: "1",
+                    }}
+                  >
+                    {report.title}
+                  </h1>
+                  <span
+                    style={{
+                      fontFamily: "'IBM Plex Serif', serif",
+                      fontSize: "12pt",
+                      color: "#6B7280",
+                      fontStyle: "italic",
+                    }}
+                  >
+                    Investment Memorandum
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs font-sans text-gray-500 uppercase tracking-widest">
+                  <span>SignalForge Intelligence</span>
+                  <span>{new Date().toLocaleDateString()}</span>
+                </div>
+              </div>
+
+              {/* GRAPH */}
+              {report.chartData && report.chartData.history && (
+                <div
+                  className="w-full border border-gray-200"
+                  style={{ height: "300px", marginBottom: "80px" }}
+                >
+                  <StockChart
+                    data={report.chartData.history}
+                    currency={report.chartData.currency}
+                  />
+                </div>
+              )}
+
+              {/* BODY CONTENT */}
+              <div className="prose max-w-none">
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    h1: ({ node, ...props }) => (
+                      <h1
+                        style={{
+                          fontFamily: "'IBM Plex Sans', sans-serif",
+                          fontSize: "16pt",
+                          fontWeight: "600",
+                          color: "#111827",
+                          marginTop: "24px",
+                          marginBottom: "12px",
+                          borderBottom: "1px solid #E5E7EB",
+                          paddingBottom: "4px",
+                        }}
+                        {...props}
+                      />
+                    ),
+                    h2: ({ node, ...props }) => (
+                      <h2
+                        style={{
+                          fontFamily: "'IBM Plex Sans', sans-serif",
+                          fontSize: "14pt",
+                          fontWeight: "600",
+                          color: "#1F2937",
+                          marginTop: "20px",
+                          marginBottom: "10px",
+                        }}
+                        {...props}
+                      />
+                    ),
+                    p: ({ node, ...props }) => (
+                      <p
+                        style={{
+                          fontFamily: "'IBM Plex Serif', serif",
+                          fontSize: "11pt",
+                          lineHeight: "1.6",
+                          color: "#374151",
+                          marginBottom: "12px",
+                          textAlign: "justify",
+                        }}
+                        {...props}
+                      />
+                    ),
+                    li: ({ node, ...props }) => (
+                      <li
+                        style={{
+                          fontFamily: "'IBM Plex Serif', serif",
+                          fontSize: "11pt",
+                          marginBottom: "4px",
+                          color: "#374151",
+                        }}
+                        {...props}
+                      />
+                    ),
+                    strong: ({ node, ...props }) => (
+                      <strong
+                        style={{ color: "#111827", fontWeight: "600" }}
+                        {...props}
+                      />
+                    ),
+                  }}
+                >
+                  {report.content}
+                </ReactMarkdown>
+              </div>
             </div>
           </div>
 
-          {/* VISIBLE DARK MODE CONTENT */}
+          {/* VISIBLE UI (Dark Mode) */}
           <div className="bg-bg p-4 rounded-xl">
             {report.chartData && report.chartData.history && (
               <div className="mt-6 mb-8 p-4 bg-zinc-900/50 rounded-lg border border-zinc-800">
@@ -368,16 +517,7 @@ export default function AgentPage() {
                 />
               </div>
             )}
-
-            <div
-              className="prose prose-invert prose-emerald max-w-none 
-              prose-headings:font-bold prose-h1:text-3xl prose-h2:text-2xl prose-h2:mt-8 prose-h2:mb-4 prose-h2:pb-2 prose-h2:border-b prose-h2:border-zinc-800
-              prose-p:text-zinc-300 prose-p:leading-relaxed prose-p:text-lg
-              prose-strong:text-white prose-strong:font-semibold
-              prose-ul:my-6 prose-li:my-2
-              prose-blockquote:border-l-4 prose-blockquote:border-emerald-500 prose-blockquote:bg-zinc-900/50 prose-blockquote:py-2 prose-blockquote:px-4 prose-blockquote:rounded-r
-            "
-            >
+            <div className="prose prose-invert prose-emerald max-w-none">
               <ReactMarkdown remarkPlugins={[remarkGfm]}>
                 {report.content}
               </ReactMarkdown>
