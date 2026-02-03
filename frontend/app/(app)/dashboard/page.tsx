@@ -8,19 +8,27 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabase";
 import { getToken } from "@/lib/auth";
 
-// 1. Define the shape of the data needed for the UI
+interface ChartData {
+  symbol: string;
+  currency: string;
+  history: { date: string; price: number }[];
+}
+
 interface Report {
   id: number;
   company_name: string;
   created_at: string;
+  report_content: string;
+  chart_data?: ChartData;
   sentiment_score?: number;
 }
 
-// 2. Define the shape of the raw API response
 interface APIReport {
   id: number;
   company_name: string;
   created_at: string;
+  report_content: string;
+  chart_data?: ChartData;
   owner_id: number;
 }
 
@@ -32,7 +40,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     const fetchReports = async () => {
-      // 1. Check Session (Redirect if not logged in)
       const {
         data: { session },
       } = await supabase.auth.getSession();
@@ -42,28 +49,19 @@ export default function DashboardPage() {
       }
 
       try {
-        // 2. Get Token safely
         const token = await getToken();
+        if (!token) return;
 
-        if (!token) {
-          console.error("No token found");
-          return;
-        }
-
-        // 3. Fetch from your Python Backend
         const res = await fetch("http://127.0.0.1:8000/api/reports", {
           headers: { Authorization: `Bearer ${token}` },
         });
 
         if (res.ok) {
           const data: APIReport[] = await res.json();
-
-          // Enrich with visual sentiment score
           const enriched: Report[] = data.map((r) => ({
             ...r,
             sentiment_score: 40 + ((r.id * 7) % 55),
           }));
-
           setReports(enriched);
         }
       } catch (error) {
@@ -80,12 +78,10 @@ export default function DashboardPage() {
     e.stopPropagation();
     if (!confirm("Purge this report from the archive?")) return;
 
-    // Optimistic UI Update
     setReports((prev) => prev.filter((r) => r.id !== id));
 
     try {
       const token = await getToken();
-
       if (token) {
         await fetch(`http://127.0.0.1:8000/api/reports/${id}`, {
           method: "DELETE",
@@ -165,9 +161,6 @@ export default function DashboardPage() {
             <TrendingUp className="w-6 h-6 text-zinc-600" />
           </div>
           <p className="text-zinc-500 font-light">Your archive is empty.</p>
-          <p className="text-zinc-600 text-sm mt-1">
-            Run an analysis in the Agent console to populate this vault.
-          </p>
           <Button
             variant="link"
             onClick={() => router.push("/agent")}

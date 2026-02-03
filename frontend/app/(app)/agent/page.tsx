@@ -168,7 +168,7 @@ export default function AgentPage() {
       const USABLE_HEIGHT = pageHeight - TOP_MARGIN - BOTTOM_MARGIN;
 
       let heightLeft = imgHeight;
-      let position = 0; // Internal position tracking of the source image
+      let position = 0;
       let page = 1;
 
       // --- PAGE 1 ---
@@ -357,10 +357,7 @@ export default function AgentPage() {
             </div>
           </div>
 
-          {/* ================================================================
-            THE INSTITUTIONAL BRIEF (Stealth Render)
-            ================================================================
-          */}
+          {/*  THE INSTITUTIONAL BRIEF (Stealth Render)*/}
           <div className="overflow-hidden h-0 w-0">
             <div
               id="print-content"

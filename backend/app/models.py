@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey
+from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from app.db import Base 
 import datetime
@@ -18,6 +18,7 @@ class Report(Base):
     id = Column(Integer, primary_key=True, index=True)
     company_name = Column(String, index=True)
     report_content = Column(Text)
+    chart_data = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
     # Foreign Key to link report to a user
