@@ -6,9 +6,14 @@ def get_stock_history(query: str):
     Attempts to find a ticker from the query and returns 3mo daily data.
     """
     try:
+        import requests
+        session = requests.Session()
+        session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+        })
+
         ticker_symbol = query.upper().strip()
-        
-        ticker = yf.Ticker(ticker_symbol)
+        ticker = yf.Ticker(ticker_symbol, session=session)
         
         # Fetch 3 months of history
         hist = ticker.history(period="3mo")

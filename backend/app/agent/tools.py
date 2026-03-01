@@ -25,7 +25,12 @@ def fetch_stock_data(ticker: str):
     Input should be a stock ticker symbol (e.g., AAPL, TSLA).
     """
     try:
-        stock = yf.Ticker(ticker)
+        import requests
+        session = requests.Session()
+        session.headers.update({
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
+        })
+        stock = yf.Ticker(ticker, session=session)
         hist = stock.history(period="1mo")
         
         if hist.empty:
