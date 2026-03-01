@@ -42,7 +42,7 @@ def resolve_ticker(query: str, api_key: str) -> str:
     try:
         # We use a fast, deterministic model for quick parsing
         llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", api_key=api_key, temperature=0.0)
-        prompt = f"The user entered: '{query}'. Reply with ONLY the official stock ticker symbol (e.g., AAPL). For Indian stocks, append .NS or .BO (e.g., ZOMATO.NS, TATAMOTORS.NS). If the company is not publicly traded, or the query is gibberish/irrelevant, reply with ONLY the exact word 'INVALID'. Do not include any other text."
+        prompt = f"The user entered: '{query}'. Reply with ONLY the official, currently active stock ticker symbol (e.g., AAPL). For Indian stocks, append .NS or .BO (e.g., RELIANCE.NS, TATAMOTORS.NS). Be aware of recent corporate name changes (e.g., if they ask for Zomato, return ETERNAL.NS). If the company is not publicly traded, delisted, or the query is gibberish/irrelevant, reply with ONLY the exact word 'INVALID'. Do not include any other text."
         res = llm.invoke(prompt)
         return res.content.strip().upper()
     except Exception as e:
