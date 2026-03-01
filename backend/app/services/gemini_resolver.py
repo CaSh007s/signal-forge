@@ -1,5 +1,6 @@
 import os
 from fastapi import HTTPException
+from typing import Optional
 from app.services.supabase_client import get_user_gemini_key
 from app.services.encryption import decrypt_key
 from app.models import User
@@ -7,7 +8,7 @@ from app.models import User
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 SERVER_GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
-def resolve_gemini_key(user: User) -> str | None:
+def resolve_gemini_key(user: User) -> Optional[str]:
     # 1. Admin Bypass
     if ADMIN_EMAIL and user.email == ADMIN_EMAIL:
         if SERVER_GOOGLE_API_KEY:

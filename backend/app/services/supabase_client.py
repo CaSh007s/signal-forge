@@ -1,5 +1,6 @@
 import os
 from supabase import create_client, Client
+from typing import Optional
 
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
@@ -14,7 +15,7 @@ def get_supabase() -> Client:
         _supabase = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
     return _supabase
 
-def get_user_gemini_key(user_id: str) -> str | None:
+def get_user_gemini_key(user_id: str) -> Optional[str]:
     """Fetches the encrypted gemini key for the given Supabase user_id."""
     supabase = get_supabase()
     # Note: user_id must be the uuid from auth.users (often tied to email or returned via JWT)
