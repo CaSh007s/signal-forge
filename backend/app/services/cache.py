@@ -28,3 +28,8 @@ class CacheService:
     def set(key: str, value: Any, expire_seconds: int = 3600):
         if not r: return
         r.setex(key, expire_seconds, json.dumps(value))
+
+    @staticmethod
+    def delete(key: str):
+        if not r: return
+        r.delete(key)

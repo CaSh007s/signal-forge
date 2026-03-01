@@ -166,6 +166,9 @@ def delete_report(
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
     
+    # Clean up the Redis Cache so it forces a fresh regeneration next time
+    CacheService.delete(f"report:{report.company_name}")
+    
     db.delete(report)
     db.commit()
     return {"status": "deleted", "id": report_id}

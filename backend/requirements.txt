@@ -105,6 +105,6 @@ watchfiles
 websockets
 xxhash
 yarl
-yfinance
+yfinance>=1.2.0
 zstandard
 supabase
