@@ -35,7 +35,8 @@ def get_stock_history(query: str):
             "start": start_str,
             "end": end_str,
             "limit": 10000,
-            "adjustment": "split"
+            "adjustment": "split",
+            "feed": "iex"
         }
 
         res = requests.get(url, headers=headers, params=params)

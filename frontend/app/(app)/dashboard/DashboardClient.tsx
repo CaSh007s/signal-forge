@@ -208,7 +208,7 @@ function ReportCard({
       exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.2 } }}
       transition={{ delay: index * 0.05 }}
       whileHover={{ y: -5, boxShadow: "0 20px 40px -10px rgba(0,0,0,0.5)" }}
-      onClick={() => router.push(`/agent?id=${report.id}`)}
+      onClick={() => router.push(`/reports/${report.id}`)}
       className="group relative h-52 bg-zinc-900/40 backdrop-blur-md border border-white/5 hover:border-emerald-500/30 rounded-2xl p-6 cursor-pointer overflow-hidden transition-colors duration-500"
     >
       <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />

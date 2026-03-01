@@ -51,7 +51,8 @@ def fetch_stock_data(ticker: str):
             "start": start_dt.strftime('%Y-%m-%dT00:00:00Z'),
             "end": end_dt.strftime('%Y-%m-%dT23:59:59Z'),
             "limit": 1000,
-            "adjustment": "split"
+            "adjustment": "split",
+            "feed": "iex"
         }
 
         res = requests.get(url, headers=headers, params=params)
