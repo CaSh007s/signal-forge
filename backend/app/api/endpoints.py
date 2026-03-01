@@ -137,3 +137,20 @@ def delete_report(
     db.delete(report)
     db.commit()
     return {"status": "deleted", "id": report_id}
+
+@router.get("/reports/{report_id}", response_model=schemas.ReportResponse)
+def get_report(
+    report_id: int,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Fetch a single report by ID."""
+    report = db.query(models.Report).filter(
+        models.Report.id == report_id, 
+        models.Report.owner_id == current_user.id
+    ).first()
+    
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+        
+    return report
