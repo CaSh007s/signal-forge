@@ -96,6 +96,9 @@ async def analyze_company(
 
         return response_data
 
+    except HTTPException as http_exc:
+        # Re-raise the HTTP exception specifically so the 428 bypasses the generic catch
+        raise http_exc
     except Exception as e:
         print(f"Error in analysis: {e}")
         raise HTTPException(status_code=500, detail=str(e))
