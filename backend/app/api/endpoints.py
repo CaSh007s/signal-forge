@@ -100,6 +100,14 @@ async def analyze_company(
         # Re-raise the HTTP exception specifically so the 428 bypasses the generic catch
         raise http_exc
     except Exception as e:
+        error_msg = str(e)
+        if "API key not valid" in error_msg or "API_KEY_INVALID" in error_msg:
+            # The saved key was invalid. Delete it so the user is prompted again.
+            from app.services.supabase_client import delete_user_gemini_key
+            if hasattr(current_user, "supabase_uid") and current_user.supabase_uid:
+                delete_user_gemini_key(current_user.supabase_uid)
+            raise HTTPException(status_code=428, detail="Invalid API Key. Please provide a working key.")
+            
         print(f"Error in analysis: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 

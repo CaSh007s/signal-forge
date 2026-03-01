@@ -55,6 +55,33 @@ export default function AgentPage() {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
+  // Check BYOK Status on Mount
+  useEffect(() => {
+    const checkByokStatus = async () => {
+      // If we already know they have a key from local storage, don't check
+      if (localStorage.getItem("hasGeminiKey") === "true") return;
+
+      try {
+        const token = await getToken();
+        if (!token) return;
+        const res = await fetch(`${API_URL}/api/user/gemini-key/status`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (!data.hasKey) {
+            setShowByok(true);
+          } else {
+            localStorage.setItem("hasGeminiKey", "true");
+          }
+        }
+      } catch (err) {
+        console.error("BYOK check failed", err);
+      }
+    };
+    checkByokStatus();
+  }, [API_URL]);
+
   useEffect(() => {
     if (reportId) fetchReport(reportId);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -118,8 +145,12 @@ export default function AgentPage() {
       clearInterval(logInterval);
 
       if (res.status === 428) {
+        localStorage.removeItem("hasGeminiKey");
         setShowByok(true);
-        setLogs((prev) => [...prev, "⚠️ Bring Your Own Key (BYOK) Required."]);
+        setLogs((prev) => [
+          ...prev,
+          "⚠️ Bring Your Own Key (BYOK) Required or Invalid.",
+        ]);
         return;
       }
 
