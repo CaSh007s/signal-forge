@@ -100,15 +100,19 @@ async def analyze_company(
         # Re-raise the HTTP exception specifically so the 428 bypasses the generic catch
         raise http_exc
     except Exception as e:
-        error_msg = str(e)
-        if "API key not valid" in error_msg or "API_KEY_INVALID" in error_msg:
-            # The saved key was invalid. Delete it so the user is prompted again.
+        error_str = str(e).lower()
+        print(f"Error in analysis: {error_str}")
+        
+        # Check for invalid key, quota exhaustion, or other generative AI auth errors
+        if any(keyword in error_str for keyword in [
+            "api key not valid", "api_key_invalid", "quota", "429", "exhausted", "403", "401"
+        ]):
+            # The saved key was invalid or exhausted. Delete it so the user is prompted again.
             from app.services.supabase_client import delete_user_gemini_key
             if hasattr(current_user, "supabase_uid") and current_user.supabase_uid:
                 delete_user_gemini_key(current_user.supabase_uid)
-            raise HTTPException(status_code=428, detail="Invalid API Key. Please provide a working key.")
+            raise HTTPException(status_code=428, detail="Key invalid or exhausted. Please provide a new API key.")
             
-        print(f"Error in analysis: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/reports", response_model=List[schemas.ReportResponse])
