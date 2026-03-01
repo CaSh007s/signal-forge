@@ -21,30 +21,56 @@ ddg_tool = DuckDuckGoSearchRun()
 @tool
 def fetch_stock_data(ticker: str):
     """
-    Fetches historical stock data and current info using yfinance.
+    Fetches historical stock data and current info from Alpaca.
     Input should be a stock ticker symbol (e.g., AAPL, TSLA).
     """
     try:
         import requests
-        session = requests.Session()
-        session.headers.update({
-            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
-        })
-        stock = yf.Ticker(ticker, session=session)
-        hist = stock.history(period="1mo")
+        from datetime import datetime, timedelta
+        import os
         
-        if hist.empty:
+        api_key = os.getenv("ALPACA_API_KEY")
+        secret_key = os.getenv("ALPACA_SECRET_KEY")
+        
+        if not api_key or not secret_key:
+            return {"error": "Alpaca API keys not configured on server"}
+
+        headers = {
+            "APCA-API-KEY-ID": api_key,
+            "APCA-API-SECRET-KEY": secret_key,
+            "Accept": "application/json"
+        }
+
+        # 1 month ago
+        end_dt = datetime.utcnow()
+        start_dt = end_dt - timedelta(days=30)
+        
+        url = f"https://data.alpaca.markets/v2/stocks/{ticker.upper()}/bars"
+        params = {
+            "timeframe": "1Day",
+            "start": start_dt.strftime('%Y-%m-%dT00:00:00Z'),
+            "end": end_dt.strftime('%Y-%m-%dT23:59:59Z'),
+            "limit": 1000,
+            "adjustment": "split"
+        }
+
+        res = requests.get(url, headers=headers, params=params)
+        if res.status_code != 200:
+            return {"error": f"Alpaca API error: {res.text}"}
+
+        bars = res.json().get("bars", [])
+        if not bars:
             return {"error": "No stock data found"}
 
-        start_price = hist["Close"].iloc[0]
-        end_price = hist["Close"].iloc[-1]
+        start_price = bars[0]['c']
+        end_price = bars[-1]['c']
         growth = ((end_price - start_price) / start_price) * 100
 
         return {
             "current_price": round(end_price, 2),
             "start_price_1mo": round(start_price, 2),
             "growth_1mo_percent": round(growth, 2),
-            "currency": stock.info.get("currency", "USD")
+            "currency": "USD"
         }
     except Exception as e:
         return {"error": str(e)}
