@@ -82,6 +82,27 @@ export default function AgentPage() {
     checkByokStatus();
   }, [API_URL]);
 
+  // Clear BYOK Key on Window Close
+  useEffect(() => {
+    const handleUnload = () => {
+      // Best effort deletion of the key when the window closes
+      getToken().then((token) => {
+        if (token) {
+          fetch(`${API_URL}/api/user/gemini-key`, {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+            keepalive: true,
+          }).catch(() => {});
+        }
+      });
+      // Always wipe our local cache
+      localStorage.removeItem("hasGeminiKey");
+    };
+
+    window.addEventListener("beforeunload", handleUnload);
+    return () => window.removeEventListener("beforeunload", handleUnload);
+  }, [API_URL]);
+
   useEffect(() => {
     if (reportId) fetchReport(reportId);
     // eslint-disable-next-line react-hooks/exhaustive-deps

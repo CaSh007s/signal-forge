@@ -41,7 +41,7 @@ def set_user_gemini_key(user_id: str, encrypted_key: str) -> bool:
         return True
     except Exception as e:
         print(f"Error updating user metadata in Supabase: {e}")
-        return False
+        raise ValueError(f"Supabase Admin API Error: {str(e)}")
 
 def delete_user_gemini_key(user_id: str) -> bool:
     """Removes the encrypted gemini key from the user's raw_user_meta_data."""
