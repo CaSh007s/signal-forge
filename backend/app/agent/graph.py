@@ -25,13 +25,6 @@ Your goal is to produce a comprehensive, data-driven "Investment Memorandum" for
 * Format with clear Markdown headers (##), bolding (**), and bullet points.
 """
 
-# Initialize Model
-if not os.getenv("GOOGLE_API_KEY"):
-    print("⚠️ WARNING: GOOGLE_API_KEY not found in .env")
-
-model = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.2)
-model_with_tools = model.bind_tools(tools)
-
 # --- 2. NODES ---
 
 def agent_node(state: AgentState):
@@ -39,12 +32,17 @@ def agent_node(state: AgentState):
     The Brain: Decides whether to call a tool or answer the user.
     """
     messages = state["messages"]
+    api_key = state.get("api_key") or os.getenv("GOOGLE_API_KEY")
+    
+    # Instantiate the model dynamically per request
+    dynamic_model = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.2, api_key=api_key)
+    dynamic_model_with_tools = dynamic_model.bind_tools(tools)
     
     # Inject System Prompt if it's the first turn
     if not isinstance(messages[0], SystemMessage):
         messages.insert(0, SystemMessage(content=SYSTEM_PROMPT))
     
-    response = model_with_tools.invoke(messages)
+    response = dynamic_model_with_tools.invoke(messages)
     return {"messages": [response]}
 
 def should_continue(state: AgentState) -> Literal["tools", "__end__"]:

@@ -8,6 +8,7 @@ from app.services.cache import CacheService
 from app import schemas, models
 from app.db import get_db
 from app.auth_utils import get_current_user
+from app.services.gemini_resolver import resolve_gemini_key
 
 router = APIRouter()
 
@@ -54,8 +55,13 @@ async def analyze_company(
 
         print(f"🐢 CACHE MISS: {query_key} -> Running Agent...")
 
+        # 1.5. Check User API Key
+        api_key = resolve_gemini_key(current_user)
+        if not api_key:
+            raise HTTPException(status_code=428, detail="Bring Your Own Key (BYOK) required.")
+
         # 2. RUN AGENT (Slow Path)
-        initial_state = {"messages": [("user", request.query)]}
+        initial_state = {"messages": [("user", request.query)], "api_key": api_key}
         result = await agent_app.ainvoke(initial_state)
         raw_content = result["messages"][-1].content
         report_text = parse_agent_response(raw_content)

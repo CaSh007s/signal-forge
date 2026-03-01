@@ -124,6 +124,8 @@ def get_current_user(
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
-        return new_user
-        
+        user = new_user
+    
+    # Dynamically attach Supabase UID (sub) to the object for BYOK retrieval
+    user.supabase_uid = payload.get("sub")
     return user

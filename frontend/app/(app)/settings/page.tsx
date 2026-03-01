@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/lib/supabase";
 import { useUser } from "@/context/user-context";
+import { getToken } from "@/lib/auth";
 import { User as SupabaseUser } from "@supabase/supabase-js";
 import Image from "next/image";
 import QRCode from "qrcode";
@@ -546,6 +547,34 @@ function DataSection({ user }: { user: SupabaseUser }) {
   const [password, setPassword] = useState("");
   const [loadingDelete, setLoadingDelete] = useState(false);
   const [loadingExport, setLoadingExport] = useState(false);
+  const [loadingPurge, setLoadingPurge] = useState(false);
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
+  const handlePurge = async () => {
+    if (
+      !window.confirm(
+        "Are you sure you want to delete all reports and API keys? This cannot be undone.",
+      )
+    ) {
+      return;
+    }
+    setLoadingPurge(true);
+    try {
+      const token = await getToken();
+      if (!token) throw new Error("Authentication failed");
+      const res = await fetch(`${API_URL}/api/user/purge`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error("Failed to purge data");
+      localStorage.removeItem("hasGeminiKey");
+      alert("All intelligence configurations and cache have been purged.");
+    } catch (error) {
+      alert((error as Error).message);
+    } finally {
+      setLoadingPurge(false);
+    }
+  };
 
   const handleExport = async () => {
     setLoadingExport(true);
@@ -621,6 +650,20 @@ function DataSection({ user }: { user: SupabaseUser }) {
             <Download className="w-4 h-4 mr-3 text-zinc-500 group-hover:text-emerald-400" />
           )}
           Export Intelligence Archive (JSON)
+        </Button>
+
+        <Button
+          onClick={handlePurge}
+          disabled={loadingPurge}
+          variant="outline"
+          className="w-full justify-start h-12 bg-black/20 border-zinc-800 hover:bg-zinc-900 hover:text-white group mt-4"
+        >
+          {loadingPurge ? (
+            <Loader2 className="w-4 h-4 mr-3 animate-spin" />
+          ) : (
+            <Trash2 className="w-4 h-4 mr-3 text-zinc-500 group-hover:text-orange-400" />
+          )}
+          Purge Session Context & API Keys
         </Button>
 
         <div className="pt-8 border-t border-white/5">

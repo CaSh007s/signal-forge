@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { getToken } from "@/lib/auth";
 import { StockChart } from "@/components/stock-chart";
+import { ByokModal } from "@/components/ByokModal";
 import { toPng } from "html-to-image";
 import { jsPDF } from "jspdf";
 
@@ -43,6 +44,10 @@ export default function AgentPage() {
   const [report, setReport] = useState<ReportState | null>(null);
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
+
+  const [showByok, setShowByok] = useState(false);
+  const [byokLoading, setByokLoading] = useState(false);
+
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
   const logsEndRef = useRef<HTMLDivElement>(null);
 
@@ -52,6 +57,7 @@ export default function AgentPage() {
 
   useEffect(() => {
     if (reportId) fetchReport(reportId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reportId]);
 
   const fetchReport = async (id: string) => {
@@ -111,6 +117,12 @@ export default function AgentPage() {
 
       clearInterval(logInterval);
 
+      if (res.status === 428) {
+        setShowByok(true);
+        setLogs((prev) => [...prev, "⚠️ Bring Your Own Key (BYOK) Required."]);
+        return;
+      }
+
       if (res.ok) {
         const data = await res.json();
         setReport({
@@ -121,11 +133,40 @@ export default function AgentPage() {
       } else {
         setLogs((prev) => [...prev, "❌ Error: Analysis failed."]);
       }
-    } catch (error) {
+    } catch {
       clearInterval(logInterval);
       setLogs((prev) => [...prev, "❌ Error: Connection failed."]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleByokSubmit = async (key: string) => {
+    setByokLoading(true);
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const res = await fetch(`${API_URL}/api/user/gemini-key`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ api_key: key }),
+      });
+      if (res.ok) {
+        localStorage.setItem("hasGeminiKey", "true");
+        setShowByok(false);
+        // Automatically start research again
+        startResearch();
+      } else {
+        alert("Failed to save key. Please try again.");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Network error saving key.");
+    } finally {
+      setByokLoading(false);
     }
   };
 
@@ -438,7 +479,7 @@ export default function AgentPage() {
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
-                    h1: ({ node, ...props }) => (
+                    h1: ({ ...props }) => (
                       <h1
                         style={{
                           fontFamily: "'IBM Plex Sans', sans-serif",
@@ -453,7 +494,7 @@ export default function AgentPage() {
                         {...props}
                       />
                     ),
-                    h2: ({ node, ...props }) => (
+                    h2: ({ ...props }) => (
                       <h2
                         style={{
                           fontFamily: "'IBM Plex Sans', sans-serif",
@@ -466,7 +507,7 @@ export default function AgentPage() {
                         {...props}
                       />
                     ),
-                    p: ({ node, ...props }) => (
+                    p: ({ ...props }) => (
                       <p
                         style={{
                           fontFamily: "'IBM Plex Serif', serif",
@@ -479,7 +520,7 @@ export default function AgentPage() {
                         {...props}
                       />
                     ),
-                    li: ({ node, ...props }) => (
+                    li: ({ ...props }) => (
                       <li
                         style={{
                           fontFamily: "'IBM Plex Serif', serif",
@@ -490,7 +531,7 @@ export default function AgentPage() {
                         {...props}
                       />
                     ),
-                    strong: ({ node, ...props }) => (
+                    strong: ({ ...props }) => (
                       <strong
                         style={{ color: "#111827", fontWeight: "600" }}
                         {...props}
@@ -522,6 +563,12 @@ export default function AgentPage() {
           </div>
         </div>
       )}
+
+      <ByokModal
+        isOpen={showByok}
+        loading={byokLoading}
+        onSubmit={handleByokSubmit}
+      />
     </div>
   );
 }
