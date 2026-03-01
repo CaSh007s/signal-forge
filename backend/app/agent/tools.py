@@ -29,6 +29,33 @@ def fetch_stock_data(ticker: str):
         from datetime import datetime, timedelta
         import os
         
+        if "." in ticker:
+            import yfinance as yf
+            tick = yf.Ticker(ticker.upper())
+            hist = tick.history(period="1mo")
+            if hist.empty:
+                return {"error": "No stock data found via international feed."}
+                
+            start_price = hist['Close'].iloc[0]
+            end_price = hist['Close'].iloc[-1]
+            growth = ((end_price - start_price) / start_price) * 100
+            
+            currency = "USD"
+            if ticker.upper().endswith(".NS") or ticker.upper().endswith(".BO"):
+                currency = "INR"
+            elif ticker.upper().endswith(".L"):
+                currency = "GBP"
+            elif ticker.upper().endswith(".TO"):
+                currency = "CAD"
+                
+            return {
+                "current_price": round(end_price, 2),
+                "start_price_1mo": round(start_price, 2),
+                "growth_1mo_percent": round(growth, 2),
+                "currency": currency
+            }
+
+        # 2. US Market Default (Alpaca)
         api_key = os.getenv("ALPACA_API_KEY")
         secret_key = os.getenv("ALPACA_SECRET_KEY")
         

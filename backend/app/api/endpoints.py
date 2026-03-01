@@ -9,6 +9,7 @@ from app import schemas, models
 from app.db import get_db
 from app.auth_utils import get_current_user
 from app.services.gemini_resolver import resolve_gemini_key
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 router = APIRouter()
 
@@ -36,6 +37,18 @@ def parse_agent_response(content: Any) -> str:
         return "\n".join(text_parts)
     return str(content)
 
+def resolve_ticker(query: str, api_key: str) -> str:
+    """Uses Gemini to identify the exact stock ticker or return INVALID for gibberish."""
+    try:
+        # We use a fast, deterministic model for quick parsing
+        llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", api_key=api_key, temperature=0.0)
+        prompt = f"The user entered: '{query}'. Reply with ONLY the official stock ticker symbol (e.g., AAPL). For Indian stocks, append .NS or .BO (e.g., ZOMATO.NS, TATAMOTORS.NS). If the company is not publicly traded, or the query is gibberish/irrelevant, reply with ONLY the exact word 'INVALID'. Do not include any other text."
+        res = llm.invoke(prompt)
+        return res.content.strip().upper()
+    except Exception as e:
+        print(f"Ticker resolution failed: {e}")
+        return "INVALID"
+
 # --- Endpoints ---
 
 @router.post("/analyze", response_model=AnalysisResponse)
@@ -45,10 +58,20 @@ async def analyze_company(
     current_user: models.User = Depends(get_current_user)
 ):
     try:
-        query_key = request.query.strip().upper()
+        # 1. Resolve User API Key First
+        api_key = resolve_gemini_key(current_user)
+        if not api_key:
+            raise HTTPException(status_code=428, detail="Bring Your Own Key (BYOK) required.")
+
+        # 2. Extract Official Ticker via LLM
+        query_key = resolve_ticker(request.query, api_key)
+        
+        if query_key == "INVALID":
+            raise HTTPException(status_code=400, detail="Could not identify a publicly traded company from that query.")
+            
         cache_key = f"report:{query_key}"
 
-        # 1. CHECK CACHE (Fast Path)
+        # 3. CHECK CACHE (Fast Path)
         if not request.force_regenerate:
             cached_data = CacheService.get(cache_key)
             if cached_data:
@@ -59,24 +82,19 @@ async def analyze_company(
 
         print(f"🐢 CACHE MISS: {query_key} -> Running Agent...")
 
-        # 1.5. Check User API Key
-        api_key = resolve_gemini_key(current_user)
-        if not api_key:
-            raise HTTPException(status_code=428, detail="Bring Your Own Key (BYOK) required.")
-
-        # 2. RUN AGENT (Slow Path)
-        initial_state = {"messages": [("user", request.query)], "api_key": api_key}
+        # 4. RUN AGENT (Slow Path)
+        initial_state = {"messages": [("user", f"Analyze this company/ticker: {query_key}")], "api_key": api_key}
         result = await agent_app.ainvoke(initial_state)
         raw_content = result["messages"][-1].content
         report_text = parse_agent_response(raw_content)
         
-        # 3. FETCH VISUALS
+        # 5. FETCH VISUALS
         try:
-            chart_data = get_stock_history(request.query)
+            chart_data = get_stock_history(query_key)
         except Exception:
             chart_data = None
 
-        # 4. SAVE TO DATABASE (Persistent Memory)
+        # 6. SAVE TO DATABASE (Persistent Memory)
         db_report = db.query(models.Report).filter(
             models.Report.company_name == query_key,
             models.Report.owner_id == current_user.id
@@ -97,7 +115,7 @@ async def analyze_company(
         db.commit()
         db.refresh(db_report)
 
-        # 5. CONSTRUCT RESPONSE
+        # 7. CONSTRUCT RESPONSE
         response_data = {
             "id": db_report.id,
             "company_name": query_key,
@@ -105,7 +123,7 @@ async def analyze_company(
             "chart_data": chart_data
         }
 
-        # 6. SAVE TO CACHE (12 Hour TTL)
+        # 8. SAVE TO CACHE (12 Hour TTL)
         CacheService.set(cache_key, response_data, expire_seconds=43200)
 
         return response_data

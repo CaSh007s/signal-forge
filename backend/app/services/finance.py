@@ -9,6 +9,38 @@ def get_stock_history(query: str):
     try:
         ticker_symbol = query.upper().strip()
         
+        # 1. Global Market Fallback (yfinance)
+        if "." in ticker_symbol:
+            import yfinance as yf
+            ticker = yf.Ticker(ticker_symbol)
+            hist = ticker.history(period="3mo")
+            
+            if hist.empty:
+                print(f"yfinance found no data for {ticker_symbol}")
+                return None
+                
+            data = []
+            for date, row in hist.iterrows():
+                data.append({
+                    "date": date.strftime('%Y-%m-%d'),
+                    "price": round(row['Close'], 2)
+                })
+                
+            currency = "USD"
+            if ticker_symbol.endswith(".NS") or ticker_symbol.endswith(".BO"):
+                currency = "INR"
+            elif ticker_symbol.endswith(".L"):
+                currency = "GBP"
+            elif ticker_symbol.endswith(".TO"):
+                currency = "CAD"
+                
+            return {
+                "symbol": ticker_symbol,
+                "currency": currency,
+                "history": data
+            }
+
+        # 2. US Market Default (Alpaca)
         api_key = os.getenv("ALPACA_API_KEY")
         secret_key = os.getenv("ALPACA_SECRET_KEY")
         

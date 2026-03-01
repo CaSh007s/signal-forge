@@ -114,6 +114,16 @@ export default function AgentPage() {
         return;
       }
 
+      if (res.status === 400) {
+        const errorData = await res.json();
+        setLogs((prev) => [
+          ...prev,
+          `❌ Error: ${errorData.detail || "Could not identify a publicly traded company."}`,
+        ]);
+        setLoading(false);
+        return;
+      }
+
       if (res.ok) {
         const data = await res.json();
         setLogs((prev) => [
