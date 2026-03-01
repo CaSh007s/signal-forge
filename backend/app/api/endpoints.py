@@ -15,6 +15,7 @@ router = APIRouter()
 # --- Request Models ---
 class QueryRequest(BaseModel):
     query: str
+    force_regenerate: bool = False
 
 class AnalysisResponse(BaseModel):
     id: Optional[int] = None
@@ -48,10 +49,13 @@ async def analyze_company(
         cache_key = f"report:{query_key}"
 
         # 1. CHECK CACHE (Fast Path)
-        cached_data = CacheService.get(cache_key)
-        if cached_data:
-            print(f"⚡ CACHE HIT: {query_key}")
-            return cached_data
+        if not request.force_regenerate:
+            cached_data = CacheService.get(cache_key)
+            if cached_data:
+                print(f"⚡ CACHE HIT: {query_key}")
+                return cached_data
+        else:
+            print(f"🔄 FORCING REGENERATION: {query_key}")
 
         print(f"🐢 CACHE MISS: {query_key} -> Running Agent...")
 
@@ -73,13 +77,23 @@ async def analyze_company(
             chart_data = None
 
         # 4. SAVE TO DATABASE (Persistent Memory)
-        db_report = models.Report(
-            company_name=query_key,
-            report_content=report_text,
-            chart_data=chart_data,
-            owner_id=current_user.id
-        )
-        db.add(db_report)
+        db_report = db.query(models.Report).filter(
+            models.Report.company_name == query_key,
+            models.Report.owner_id == current_user.id
+        ).first()
+
+        if db_report:
+            db_report.report_content = report_text
+            db_report.chart_data = chart_data
+        else:
+            db_report = models.Report(
+                company_name=query_key,
+                report_content=report_text,
+                chart_data=chart_data,
+                owner_id=current_user.id
+            )
+            db.add(db_report)
+            
         db.commit()
         db.refresh(db_report)
 

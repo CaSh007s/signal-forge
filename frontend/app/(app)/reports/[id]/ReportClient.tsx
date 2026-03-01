@@ -11,6 +11,7 @@ import {
   TrendingUp,
   Loader2,
   ArrowLeft,
+  RefreshCw,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getToken } from "@/lib/auth";
@@ -39,6 +40,7 @@ export default function ReportClient() {
   const [report, setReport] = useState<ReportState | null>(null);
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
@@ -78,6 +80,49 @@ export default function ReportClient() {
     navigator.clipboard.writeText(report.content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const regenerateReport = async () => {
+    if (!report) return;
+    setRegenerating(true);
+
+    try {
+      const token = await getToken();
+      if (!token) return;
+
+      const res = await fetch(`${API_URL}/api/analyze`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ query: report.title, force_regenerate: true }),
+      });
+
+      if (res.status === 428) {
+        alert(
+          "API Key invalid or exhausted. Please return to the Agent page to provide a new key.",
+        );
+        router.push("/agent");
+        return;
+      }
+
+      if (res.ok) {
+        const data = await res.json();
+        setReport({
+          title: data.company_name,
+          content: data.report_content,
+          chartData: data.chart_data || undefined,
+        });
+      } else {
+        alert("Failed to regenerate report. Please try again.");
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Network error regenerating report.");
+    } finally {
+      setRegenerating(false);
+    }
   };
 
   // --- PDF GENERATOR ---
@@ -226,7 +271,20 @@ export default function ReportClient() {
               variant="outline"
               size="sm"
               className="bg-zinc-900 border-zinc-700 text-zinc-300 hover:text-white"
+              onClick={regenerateReport}
+              disabled={regenerating || downloading}
+            >
+              <RefreshCw
+                className={`h-4 w-4 mr-2 ${regenerating ? "animate-spin text-emerald-500" : ""}`}
+              />
+              {regenerating ? "Analyzing..." : "Regenerate Data"}
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-zinc-900 border-zinc-700 text-zinc-300 hover:text-white"
               onClick={copyToClipboard}
+              disabled={regenerating}
             >
               {copied ? (
                 <Check className="h-4 w-4 mr-2 text-emerald-500" />
@@ -395,7 +453,9 @@ export default function ReportClient() {
         </div>
 
         {/* VISIBLE UI */}
-        <div className="bg-bg p-4 rounded-xl">
+        <div
+          className={`bg-bg p-4 rounded-xl transition-opacity duration-300 ${regenerating ? "opacity-50 pointer-events-none" : "opacity-100"}`}
+        >
           {report.chartData && report.chartData.history && (
             <div className="mt-6 mb-8 p-4 bg-zinc-900/50 rounded-lg border border-zinc-800">
               <StockChart

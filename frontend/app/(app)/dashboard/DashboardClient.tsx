@@ -73,7 +73,7 @@ export default function DashboardPage() {
     };
 
     fetchReports();
-  }, [router]);
+  }, [router, API_URL]);
 
   const handleDelete = async (e: React.MouseEvent, id: number) => {
     e.stopPropagation();
