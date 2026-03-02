@@ -18,6 +18,7 @@ export default function AgentPage() {
   >([]);
 
   const [showByok, setShowByok] = useState(false);
+  const [hasCheckedByok, setHasCheckedByok] = useState(false);
   const [byokLoading, setByokLoading] = useState(false);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
@@ -32,7 +33,10 @@ export default function AgentPage() {
   useEffect(() => {
     const checkByokStatus = async () => {
       // If we already know they have a key from local storage, don't check
-      if (localStorage.getItem("hasGeminiKey") === "true") return;
+      if (localStorage.getItem("hasGeminiKey") === "true") {
+        setHasCheckedByok(true);
+        return;
+      }
 
       try {
         const token = await getToken();
@@ -50,6 +54,8 @@ export default function AgentPage() {
         }
       } catch (err) {
         console.error("BYOK check failed", err);
+      } finally {
+        setHasCheckedByok(true);
       }
     };
     checkByokStatus();
@@ -278,24 +284,37 @@ export default function AgentPage() {
             </p>
           </div>
 
-          <div className="flex w-full max-w-md items-center space-x-2">
-            <Input
-              placeholder="e.g. AAPL, TSLA..."
-              className="h-14 text-lg bg-zinc-900 border-zinc-700 focus-visible:ring-emerald-500/50"
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && startResearch()}
-              disabled={showByok}
-            />
-            <Button
-              size="lg"
-              className="h-14 px-8 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold text-lg"
-              onClick={startResearch}
-              disabled={showByok}
-            >
-              <ArrowRight className="h-6 w-6" />
-            </Button>
-          </div>
+          {hasCheckedByok && !showByok ? (
+            <div className="flex w-full max-w-md items-center space-x-2 animate-slide-up">
+              <Input
+                placeholder="e.g. AAPL, TSLA..."
+                className="h-14 text-lg bg-zinc-900 border-zinc-700 focus-visible:ring-emerald-500/50"
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && startResearch()}
+              />
+              <Button
+                size="lg"
+                className="h-14 px-8 bg-emerald-500 hover:bg-emerald-600 text-black font-semibold text-lg"
+                onClick={startResearch}
+              >
+                <ArrowRight className="h-6 w-6" />
+              </Button>
+            </div>
+          ) : (
+            <div className="flex w-full max-w-md flex-col items-center justify-center p-6 bg-zinc-900/50 border border-zinc-800 rounded-xl space-y-3">
+              <div className="h-10 w-10 bg-zinc-950 rounded-full flex items-center justify-center border border-zinc-800">
+                <span className="text-zinc-500 text-xl">🔒</span>
+              </div>
+              <p className="text-zinc-400 font-medium">
+                Authentication Required
+              </p>
+              <p className="text-sm text-zinc-500 text-center">
+                Please provide your Gemini API Key in the popup to unlock the
+                intelligence engine.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
