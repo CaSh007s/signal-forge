@@ -230,7 +230,13 @@ function ReportCard({
               <div
                 key={j}
                 style={{ height: `${h * (score / 100) + 20}%` }}
-                className={`w-1 rounded-sm ${score > 50 ? "bg-emerald-500/40" : "bg-red-500/40"}`}
+                className={`w-1 rounded-sm ${
+                  score > 60
+                    ? "bg-emerald-500/40"
+                    : score < 40
+                      ? "bg-red-500/40"
+                      : "bg-yellow-500/40"
+                }`}
               />
             ))}
           </div>
