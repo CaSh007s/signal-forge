@@ -92,6 +92,7 @@ soupsieve
 SQLAlchemy
 starlette
 tavily-python
+langchain-tavily
 tenacity
 tiktoken
 typing-inspect

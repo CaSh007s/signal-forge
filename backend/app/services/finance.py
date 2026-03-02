@@ -93,12 +93,12 @@ def get_stock_history(query: str, target_currency: str = "USD"):
                 return None
 
             for bar in bars:
-            # Alpaca timestamp looks like 2024-01-02T05:00:00Z
-            bar_date = datetime.strptime(bar['t'][:10], '%Y-%m-%d').strftime('%Y-%m-%d')
-            data.append({
-                "date": bar_date,
-                "price": round(bar['c'], 2)
-            })
+                # Alpaca timestamp looks like 2024-01-02T05:00:00Z
+                bar_date = datetime.strptime(bar['t'][:10], '%Y-%m-%d').strftime('%Y-%m-%d')
+                data.append({
+                    "date": bar_date,
+                    "price": round(bar['c'], 2)
+                })
 
         # 3. Apply Multiplier
         rate = get_conversion_rate(base_currency, target_currency)
