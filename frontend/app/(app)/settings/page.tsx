@@ -257,7 +257,7 @@ function ProfileSection({
               <button
                 key={style.id}
                 onClick={() => onChange("avatar_style", style.id)}
-                className={`relative flex-shrink-0 w-24 h-24 rounded-2xl border-2 transition-all overflow-hidden group ${
+                className={`relative shrink-0 w-24 h-24 rounded-2xl border-2 transition-all overflow-hidden group ${
                   isActive
                     ? "border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.3)] scale-105 bg-emerald-500/10"
                     : "border-zinc-800 opacity-60 hover:opacity-100 hover:border-zinc-600 bg-black/20"

@@ -34,7 +34,7 @@ export function StockChart({
   const buffer = (maxPrice - minPrice) * 0.1;
 
   return (
-    <div className="w-full h-[350px] bg-zinc-950/50 border border-zinc-800 rounded-xl p-4 mb-8">
+    <div className="w-full h-87.5 bg-zinc-950/50 border border-zinc-800 rounded-xl p-4 mb-8">
       <div className="flex items-center justify-between mb-4 px-2">
         <div className="flex items-center gap-4">
           <h3 className="text-sm font-medium text-zinc-400">
