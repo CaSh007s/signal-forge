@@ -11,7 +11,7 @@ load_dotenv()
 warnings.filterwarnings("ignore", category=UserWarning, module="langchain")
 
 # 3. Use the community import
-from langchain_tavily import TavilySearchResults
+from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_community.tools import DuckDuckGoSearchRun
 
 # Initialize Search Tools
