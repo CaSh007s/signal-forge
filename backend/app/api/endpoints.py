@@ -101,19 +101,42 @@ async def analyze_company(
         report_text_raw = parse_agent_response(raw_content)
         
         import json
+        import re
+        
+        sentiment_score = 50
+        report_text = report_text_raw
+
         try:
             cleaned = report_text_raw.strip()
             if cleaned.startswith("```json"):
                 cleaned = cleaned[7:-3].strip()
             elif cleaned.startswith("```"):
                 cleaned = cleaned[3:-3].strip()
-            parsed = json.loads(cleaned)
-            sentiment_score = parsed.get("score", 50)
-            report_text = parsed.get("markdown", report_text_raw)
-        except Exception as json_e:
-            print(f"Failed to parse JSON sentiment: {json_e}")
-            sentiment_score = 50
-            report_text = report_text_raw
+                
+            start_idx = cleaned.find("{")
+            end_idx = cleaned.rfind("}")
+            
+            if start_idx != -1 and end_idx != -1:
+                cleaned = cleaned[start_idx:end_idx+1]
+                
+            try:
+                parsed = json.loads(cleaned)
+                sentiment_score = parsed.get("score", 50)
+                report_text = parsed.get("markdown", report_text_raw)
+            except json.JSONDecodeError:
+                # Fallback: LLM generated invalid JSON (likely unescaped newlines in markdown string)
+                print(f"Native JSON parse failed. Engaging Regex Regex Extraction Fallback.")
+                score_match = re.search(r'"score"\s*:\s*(\d+)', cleaned)
+                if score_match:
+                    sentiment_score = int(score_match.group(1))
+                
+                markdown_match = re.search(r'"markdown"\s*:\s*"(.*)"\s*\}\s*$', cleaned, re.DOTALL)
+                if markdown_match:
+                    extracted_text = markdown_match.group(1)
+                    # Replace escaped quotes back to normal quotes if LLM attempted partial escaping
+                    report_text = extracted_text.replace('\\"', '"')
+        except Exception as parse_e:
+            print(f"Total failure parsing report: {parse_e}")
         
         # 5. FETCH VISUALS
         try:
