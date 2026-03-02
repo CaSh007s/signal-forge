@@ -42,6 +42,8 @@ export default function ReportClient() {
   const [copied, setCopied] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
+  const [activeTimeframe, setActiveTimeframe] = useState("3M");
+  const [chartLoading, setChartLoading] = useState(false);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
@@ -125,6 +127,35 @@ export default function ReportClient() {
       alert("Network error regenerating report.");
     } finally {
       setRegenerating(false);
+    }
+  };
+
+  const handleTimeframeChange = async (tf: string) => {
+    if (!report || chartLoading || activeTimeframe === tf || !reportId) return;
+    setActiveTimeframe(tf);
+    setChartLoading(true);
+
+    try {
+      const token = await getToken();
+      if (!token) return;
+
+      const res = await fetch(
+        `${API_URL}/api/reports/${reportId}/chart?timeframe=${tf}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        },
+      );
+
+      if (res.ok) {
+        const newData = await res.json();
+        setReport({ ...report, chartData: newData });
+      } else {
+        console.error("Failed to fetch updated chart");
+      }
+    } catch (error) {
+      console.error("Error fetching chart variations:", error);
+    } finally {
+      setChartLoading(false);
     }
   };
 
@@ -394,6 +425,7 @@ export default function ReportClient() {
                 <StockChart
                   data={report.chartData.history}
                   currency={report.chartData.currency}
+                  timeframe={activeTimeframe}
                 />
               </div>
             )}
@@ -477,6 +509,9 @@ export default function ReportClient() {
               <StockChart
                 data={report.chartData.history}
                 currency={report.chartData.currency}
+                timeframe={activeTimeframe}
+                onTimeframeChange={handleTimeframeChange}
+                isLoading={chartLoading}
               />
             </div>
           )}

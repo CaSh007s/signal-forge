@@ -14,7 +14,7 @@ def get_conversion_rate(base: str, target: str) -> float:
         print(f"Forex error {base}->{target}: {e}")
     return 1.0
 
-def get_stock_history(query: str, target_currency: str = "USD"):
+def get_stock_history(query: str, target_currency: str = "USD", timeframe: str = "3M"):
     """
     Attempts to find a ticker from the query and returns 3mo daily data from Alpaca/Yfinance,
     converting to the target_currency.
@@ -28,7 +28,9 @@ def get_stock_history(query: str, target_currency: str = "USD"):
         if "." in ticker_symbol:
             import yfinance as yf
             ticker = yf.Ticker(ticker_symbol)
-            hist = ticker.history(period="3mo")
+            # Map frontend timeframe to yfinance period
+            yf_period = {"1M": "1mo", "3M": "3mo", "1Y": "1y", "5Y": "5y"}.get(timeframe, "3mo")
+            hist = ticker.history(period=yf_period)
             
             if hist.empty:
                 print(f"yfinance found no data for {ticker_symbol}")
@@ -65,8 +67,11 @@ def get_stock_history(query: str, target_currency: str = "USD"):
                 "Accept": "application/json"
             }
 
+            days_map = {"1M": 30, "3M": 90, "1Y": 365, "5Y": 1825}
+            days = days_map.get(timeframe, 90)
+
             end_dt = datetime.utcnow()
-            start_dt = end_dt - timedelta(days=90)
+            start_dt = end_dt - timedelta(days=days)
             
             start_str = start_dt.strftime('%Y-%m-%dT00:00:00Z')
             end_str = end_dt.strftime('%Y-%m-%dT23:59:59Z')

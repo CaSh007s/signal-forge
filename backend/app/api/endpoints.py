@@ -214,3 +214,29 @@ def get_report(
         raise HTTPException(status_code=404, detail="Report not found")
         
     return report
+
+@router.get("/reports/{report_id}/chart", response_model=Dict[str, Any])
+def get_report_chart(
+    report_id: int,
+    timeframe: str = "3M",
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(get_current_user)
+):
+    """Fetch an on-demand chart for an existing report with a dynamically requested timeframe."""
+    report = db.query(models.Report).filter(
+        models.Report.id == report_id, 
+        models.Report.owner_id == current_user.id
+    ).first()
+    
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+        
+    global_curr = getattr(current_user, "global_currency", "USD")
+    chart_data = get_stock_history(report.company_name, global_curr, timeframe)
+    
+    if not chart_data:
+        raise HTTPException(status_code=500, detail="Failed to fetch chart data from financial provider.")
+        
+    # Technically we don't *have* to persist toggled timeframe views to the DB, 
+    # but we will just return it directly so the UI can swap it instantly.
+    return chart_data
