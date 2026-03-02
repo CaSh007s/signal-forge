@@ -111,6 +111,13 @@ export default function ReportClient() {
         return;
       }
 
+      if (res.status === 429) {
+        alert(
+          "Daily Limit Exceeded: You have reached your maximum of 3 Agent reports per day to preserve free tier limits.",
+        );
+        return;
+      }
+
       if (res.ok) {
         const data = await res.json();
         setReport({

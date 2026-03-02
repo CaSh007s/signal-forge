@@ -161,6 +161,18 @@ export default function AgentPage() {
         return;
       }
 
+      if (res.status === 429) {
+        setLogs((prev) => [
+          ...prev,
+          {
+            text: "🛑 Daily Limit Exceeded: You have reached your 3 Agent generations per day.",
+            status: "error" as const,
+          },
+        ]);
+        setLoading(false);
+        return;
+      }
+
       if (res.status === 400) {
         const errorData = await res.json();
         setLogs((prev) => {

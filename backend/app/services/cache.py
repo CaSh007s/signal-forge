@@ -33,3 +33,21 @@ class CacheService:
     def delete(key: str):
         if not r: return
         r.delete(key)
+
+    @staticmethod
+    def get_daily_usage(user_id: int) -> int:
+        if not r: return 0
+        from datetime import datetime
+        today = datetime.utcnow().strftime('%Y-%m-%d')
+        key = f"rate_limit:{user_id}:{today}"
+        val = r.get(key)
+        return int(val) if val else 0
+
+    @staticmethod
+    def increment_daily_usage(user_id: int):
+        if not r: return
+        from datetime import datetime
+        today = datetime.utcnow().strftime('%Y-%m-%d')
+        key = f"rate_limit:{user_id}:{today}"
+        r.incr(key)
+        r.expire(key, 86400 * 2) # Auto-delete after 2 days to save space

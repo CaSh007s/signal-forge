@@ -81,6 +81,12 @@ async def analyze_company(
         else:
             print(f"🔄 FORCING REGENERATION: {query_key}")
 
+        # 3.5 CHECK API LIMITS
+        daily_usage = CacheService.get_daily_usage(current_user.id)
+        if daily_usage >= 3:
+            print(f"🛑 RATE LIMIT BLOCKED FOR USER: {current_user.id}")
+            raise HTTPException(status_code=429, detail="You have reached your 3 reports per day limit.")
+
         print(f"🐢 CACHE MISS: {query_key} -> Running Agent...")
 
         # 4. RUN AGENT (Slow Path)
@@ -138,6 +144,9 @@ async def analyze_company(
             
         db.commit()
         db.refresh(db_report)
+        
+        # 6.5 INCREMENT DAILY LIMIT AFTER SUCCESS
+        CacheService.increment_daily_usage(current_user.id)
 
         # 7. CONSTRUCT RESPONSE
         response_data = {

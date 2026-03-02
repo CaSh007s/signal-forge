@@ -95,6 +95,8 @@ export default function SettingsPage() {
         if (error) throw error;
       }
 
+      // Force exactly new JWT with fresh metadata
+      await supabase.auth.refreshSession();
       await refreshUser();
 
       setTimeout(() => {
