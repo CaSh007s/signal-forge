@@ -13,13 +13,16 @@ export default function AgentPage() {
 
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [logs, setLogs] = useState<string[]>([]);
+  const [logs, setLogs] = useState<
+    { text: string; status: "pending" | "active" | "done" | "error" }[]
+  >([]);
 
   const [showByok, setShowByok] = useState(false);
   const [byokLoading, setByokLoading] = useState(false);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
   const logsEndRef = useRef<HTMLDivElement>(null);
+  const animationRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     logsEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -74,19 +77,60 @@ export default function AgentPage() {
   const startResearch = async () => {
     if (!input.trim()) return;
     setLoading(true);
-    setLogs([
-      "Initializing SignalForge Agent...",
-      `Targeting: ${input.toUpperCase()}`,
-    ]);
 
-    const logInterval = setInterval(() => {
-      setLogs((prev) => [
-        ...prev,
-        "Analyzing market sentiment...",
-        "Querying financial data...",
-        "Synthesizing report...",
-      ]);
-    }, 1500);
+    const initialSteps = [
+      {
+        text: "Initializing Market Intelligence Engine...",
+        status: "done" as const,
+      },
+      {
+        text: `Intercepting query: "${input.toUpperCase()}"`,
+        status: "done" as const,
+      },
+      {
+        text: "Resolving natural language query to official ticker symbol...",
+        status: "active" as const,
+      },
+      {
+        text: "Establishing secure connection to global market data feeds...",
+        status: "pending" as const,
+      },
+      {
+        text: "Analyzing 90-day historical price action and volume...",
+        status: "pending" as const,
+      },
+      {
+        text: "Scraping real-time market news and sentiment...",
+        status: "pending" as const,
+      },
+      {
+        text: "Synthesizing executive briefing via generative AI...",
+        status: "pending" as const,
+      },
+      { text: "Finalizing report formatting...", status: "pending" as const },
+    ];
+
+    setLogs(initialSteps);
+
+    // Simulate the steps progressing dynamically
+    let currentStepIndex = 2;
+    const progressLogs = () => {
+      if (currentStepIndex >= initialSteps.length - 1) return;
+
+      setLogs((prev) => {
+        const next = [...prev];
+        if (next[currentStepIndex]) next[currentStepIndex].status = "done";
+        currentStepIndex++;
+        if (next[currentStepIndex]) next[currentStepIndex].status = "active";
+        return next;
+      });
+
+      // Randomize the delay to make it feel like real asynchronous work
+      const nextDelay = Math.floor(Math.random() * 1500) + 800;
+      animationRef.current = setTimeout(progressLogs, nextDelay);
+    };
+
+    animationRef.current = setTimeout(progressLogs, 1200);
 
     try {
       const token = await getToken();
@@ -101,14 +145,17 @@ export default function AgentPage() {
         body: JSON.stringify({ query: input }),
       });
 
-      clearInterval(logInterval);
+      if (animationRef.current) clearTimeout(animationRef.current);
 
       if (res.status === 428) {
         localStorage.removeItem("hasGeminiKey");
         setShowByok(true);
         setLogs((prev) => [
           ...prev,
-          "⚠️ Bring Your Own Key (BYOK) Required or Invalid.",
+          {
+            text: "⚠️ Bring Your Own Key (BYOK) Required or Invalid.",
+            status: "error" as const,
+          },
         ]);
         setLoading(false);
         return;
@@ -116,31 +163,59 @@ export default function AgentPage() {
 
       if (res.status === 400) {
         const errorData = await res.json();
-        setLogs((prev) => [
-          ...prev,
-          `❌ Error: ${errorData.detail || "Could not identify a publicly traded company."}`,
-        ]);
+        setLogs((prev) => {
+          const next = [...prev];
+          next[currentStepIndex].status = "error";
+          return [
+            ...next,
+            {
+              text: `❌ Error: ${errorData.detail || "Could not identify a publicly traded company."}`,
+              status: "error" as const,
+            },
+          ];
+        });
         setLoading(false);
         return;
       }
 
       if (res.ok) {
         const data = await res.json();
-        setLogs((prev) => [
-          ...prev,
-          "✨ Report Synthesized successfully! Redirecting...",
-        ]);
+        setLogs((prev) => {
+          const next = prev.map((l) =>
+            l.status === "active" || l.status === "pending"
+              ? { ...l, status: "done" as const }
+              : l,
+          );
+          return [
+            ...next,
+            {
+              text: "✨ Report Synthesized successfully! Redirecting...",
+              status: "done" as const,
+            },
+          ];
+        });
+
         // Redirect immediately to the new dedicated report page
         setTimeout(() => {
           router.push(`/reports/${data.id}`);
         }, 800);
       } else {
-        setLogs((prev) => [...prev, "❌ Error: Analysis failed."]);
+        setLogs((prev) => [
+          ...prev.map((l) =>
+            l.status === "active" ? { ...l, status: "error" as const } : l,
+          ),
+          { text: "❌ Error: Analysis failed.", status: "error" as const },
+        ]);
         setLoading(false);
       }
     } catch {
-      clearInterval(logInterval);
-      setLogs((prev) => [...prev, "❌ Error: Connection failed."]);
+      if (animationRef.current) clearTimeout(animationRef.current);
+      setLogs((prev) => [
+        ...prev.map((l) =>
+          l.status === "active" ? { ...l, status: "error" as const } : l,
+        ),
+        { text: "❌ Error: Connection failed.", status: "error" as const },
+      ]);
       setLoading(false);
     }
   };
@@ -224,26 +299,32 @@ export default function AgentPage() {
               </div>
               <span className="text-zinc-500 ml-2">agent_process.exe</span>
             </div>
-            <div className="p-6 space-y-2 h-64 overflow-y-auto">
-              {logs.map((log, i) => (
-                <div key={i} className="flex gap-3 text-zinc-300">
-                  <span className="text-zinc-600 select-none">{">"}</span>
-                  <span
-                    className={
-                      log.includes("Error")
-                        ? "text-red-400"
-                        : "text-emerald-400/90"
-                    }
+            <div className="p-6 space-y-3 h-64 overflow-y-auto">
+              {logs
+                .filter((l) => l.status !== "pending")
+                .map((log, i) => (
+                  <div
+                    key={i}
+                    className="flex gap-3 text-zinc-300 transition-all duration-300 ease-in-out"
                   >
-                    {log}
-                  </span>
-                </div>
-              ))}
+                    <span className="text-zinc-600 select-none">{">"}</span>
+                    <span
+                      className={`flex-1 ${
+                        log.status === "error"
+                          ? "text-red-400 font-semibold"
+                          : log.status === "active"
+                            ? "text-emerald-400"
+                            : "text-emerald-500/60"
+                      }`}
+                    >
+                      {log.text}
+                      {log.status === "active" && (
+                        <span className="ml-[2px] inline-block w-2.5 h-4 bg-emerald-400 animate-pulse relative top-0.5" />
+                      )}
+                    </span>
+                  </div>
+                ))}
               <div ref={logsEndRef} />
-              <div className="flex gap-3 text-zinc-500 animate-pulse">
-                <span>{">"}</span>
-                <span className="w-2 h-4 bg-zinc-500 block" />
-              </div>
             </div>
           </div>
         </div>
