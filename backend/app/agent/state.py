@@ -10,3 +10,4 @@ class AgentState(TypedDict, total=False):
     news_summary: str
     report: str
     api_key: str
+    global_currency: str

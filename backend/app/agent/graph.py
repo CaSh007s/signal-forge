@@ -17,6 +17,9 @@ The JSON object must contain exactly two keys:
 - "score": An integer from 0 to 100 representing the overall market sentiment (0 = maximum bearish, 50 = neutral, 100 = maximum bullish).
 - "markdown": The fully formatted markdown report text.
 
+**CRITICAL INSTRUCTION REGARDING CURRENCY:**
+All financial values, prices, and market caps MUST be formatted and converted dynamically into {global_currency}.
+
 **STRUCTURE OF YOUR REPORT (in the "markdown" field):**
 1.  **Executive Verdict:** (Bullish/Bearish/Neutral) + High conviction one-liner.
 2.  **The Catalyst:** What specifically is driving the price right now? (Earnings, Macro, Product).
@@ -46,7 +49,9 @@ def agent_node(state: AgentState):
     
     # Inject System Prompt if it's the first turn
     if not isinstance(messages[0], SystemMessage):
-        messages.insert(0, SystemMessage(content=SYSTEM_PROMPT))
+        global_currency = state.get("global_currency", "USD")
+        formatted_prompt = SYSTEM_PROMPT.format(global_currency=global_currency)
+        messages.insert(0, SystemMessage(content=formatted_prompt))
     
     response = dynamic_model_with_tools.invoke(messages)
     return {"messages": [response]}

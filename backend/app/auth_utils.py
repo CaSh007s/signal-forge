@@ -126,6 +126,11 @@ def get_current_user(
         db.refresh(new_user)
         user = new_user
     
-    # Dynamically attach Supabase UID (sub) to the object for BYOK retrieval
+    # Dynamically attach Supabase UID (sub) and global currency to the object for downstream use
     user.supabase_uid = payload.get("sub")
+    
+    # Extract global_currency from user_metadata (or default to USD)
+    user_metadata = payload.get("user_metadata", {})
+    user.global_currency = user_metadata.get("global_currency", "USD")
+    
     return user

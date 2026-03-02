@@ -84,7 +84,12 @@ async def analyze_company(
         print(f"🐢 CACHE MISS: {query_key} -> Running Agent...")
 
         # 4. RUN AGENT (Slow Path)
-        initial_state = {"messages": [("user", f"Analyze this company/ticker: {query_key}")], "api_key": api_key}
+        global_curr = getattr(current_user, "global_currency", "USD")
+        initial_state = {
+            "messages": [("user", f"Analyze this company/ticker: {query_key}")], 
+            "api_key": api_key,
+            "global_currency": global_curr
+        }
         result = await agent_app.ainvoke(initial_state)
         raw_content = result["messages"][-1].content
         report_text_raw = parse_agent_response(raw_content)
@@ -106,8 +111,9 @@ async def analyze_company(
         
         # 5. FETCH VISUALS
         try:
-            chart_data = get_stock_history(query_key)
-        except Exception:
+            chart_data = get_stock_history(query_key, global_curr)
+        except Exception as e:
+            print(f"Chart fetch error: {e}")
             chart_data = None
 
         # 6. SAVE TO DATABASE (Persistent Memory)

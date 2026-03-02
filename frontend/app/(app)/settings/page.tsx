@@ -44,6 +44,7 @@ const AVATAR_STYLES = [
 interface ProfileFormData {
   full_name: string;
   avatar_style: string;
+  global_currency: string;
 }
 
 // ✅ FIX: Strict Type for Factors
@@ -62,6 +63,7 @@ export default function SettingsPage() {
   const [formData, setFormData] = useState<ProfileFormData>({
     full_name: "",
     avatar_style: "shapes",
+    global_currency: "USD",
   });
 
   useEffect(() => {
@@ -69,6 +71,7 @@ export default function SettingsPage() {
       setFormData({
         full_name: user.user_metadata?.full_name || "",
         avatar_style: user.user_metadata?.avatar_style || "shapes",
+        global_currency: user.user_metadata?.global_currency || "USD",
       });
     }
   }, [user]);
@@ -86,6 +89,7 @@ export default function SettingsPage() {
           data: {
             full_name: formData.full_name,
             avatar_style: formData.avatar_style,
+            global_currency: formData.global_currency,
           },
         });
         if (error) throw error;
@@ -300,6 +304,25 @@ function ProfileSection({
           <div className="flex items-center gap-2 text-[10px] text-zinc-600 mt-1">
             <Shield className="w-3 h-3" />
             <span>Identity locked by administrator protocol.</span>
+          </div>
+        </SettingsField>
+        <SettingsField label="Base Financial Currency">
+          <select
+            value={formData.global_currency}
+            onChange={(e) => onChange("global_currency", e.target.value)}
+            className="w-full bg-black/20 border border-zinc-800 focus:border-emerald-500/50 rounded-md h-12 text-white px-3 outline-none transition-colors appearance-none"
+          >
+            <option value="USD">USD ($) - US Dollar</option>
+            <option value="EUR">EUR (€) - Euro</option>
+            <option value="GBP">GBP (£) - British Pound</option>
+            <option value="INR">INR (₹) - Indian Rupee</option>
+            <option value="JPY">JPY (¥) - Japanese Yen</option>
+          </select>
+          <div className="flex items-center gap-2 text-[10px] text-zinc-600 mt-1">
+            <span>
+              LLMs will automatically convert all charts and reports to this
+              baseline.
+            </span>
           </div>
         </SettingsField>
       </div>

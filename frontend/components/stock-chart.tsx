@@ -86,13 +86,18 @@ export function StockChart({ data, currency = "USD" }: StockChartProps) {
                 label &&
                 typeof label === "string"
               ) {
+                const formattedPrice = new Intl.NumberFormat("en-US", {
+                  style: "currency",
+                  currency: currency,
+                }).format(Number(payload[0].value));
+
                 return (
                   <div className="bg-zinc-900 border border-zinc-700 p-3 rounded shadow-xl">
                     <p className="text-zinc-400 text-xs mb-1">
                       {format(parseISO(label), "MMM d, yyyy")}
                     </p>
                     <p className="text-emerald-400 font-bold font-mono text-lg">
-                      ${Number(payload[0].value).toFixed(2)}
+                      {formattedPrice}
                     </p>
                   </div>
                 );
