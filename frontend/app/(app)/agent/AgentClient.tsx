@@ -319,7 +319,7 @@ export default function AgentPage() {
                     >
                       {log.text}
                       {log.status === "active" && (
-                        <span className="ml-[2px] inline-block w-2.5 h-4 bg-emerald-400 animate-pulse relative top-0.5" />
+                        <span className="ml-0.5 inline-block w-2.5 h-4 bg-emerald-400 animate-pulse relative top-0.5" />
                       )}
                     </span>
                   </div>

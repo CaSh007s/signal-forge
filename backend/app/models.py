@@ -19,6 +19,7 @@ class Report(Base):
     company_name = Column(String, index=True)
     report_content = Column(Text)
     chart_data = Column(JSON, nullable=True)
+    sentiment_score = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
     
     # Foreign Key to link report to a user

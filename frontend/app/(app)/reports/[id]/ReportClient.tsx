@@ -29,6 +29,7 @@ interface ReportState {
   title: string;
   content: string;
   chartData?: ChartData;
+  sentiment_score?: number;
 }
 
 export default function ReportClient() {
@@ -64,6 +65,7 @@ export default function ReportClient() {
           title: data.company_name,
           content: data.report_content,
           chartData: data.chart_data || undefined,
+          sentiment_score: data.sentiment_score,
         });
       } else {
         console.error("Failed to fetch report");
@@ -113,6 +115,7 @@ export default function ReportClient() {
           title: data.company_name,
           content: data.report_content,
           chartData: data.chart_data || undefined,
+          sentiment_score: data.sentiment_score,
         });
       } else {
         alert("Failed to regenerate report. Please try again.");
@@ -266,7 +269,20 @@ export default function ReportClient() {
             </div>
           </div>
 
-          <div className="flex gap-2">
+          <div className="flex gap-2 items-center">
+            {report.sentiment_score !== undefined && (
+              <div
+                className={`text-xs font-mono mr-2 px-3 py-1.5 rounded-lg border ${
+                  report.sentiment_score > 60
+                    ? "text-emerald-400 border-emerald-500/20 bg-emerald-500/10"
+                    : report.sentiment_score < 40
+                      ? "text-red-400 border-red-500/20 bg-red-500/10"
+                      : "text-yellow-400 border-yellow-500/20 bg-yellow-500/10"
+                }`}
+              >
+                SENTIMENT: {report.sentiment_score}/100
+              </div>
+            )}
             <Button
               variant="outline"
               size="sm"

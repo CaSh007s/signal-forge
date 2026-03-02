@@ -24,7 +24,8 @@ class TokenData(BaseModel):
 class ReportBase(BaseModel):
     company_name: str
     report_content: str
-    chart_data: Optional[Dict[str, Any]] = None 
+    chart_data: Optional[Dict[str, Any]] = None
+    sentiment_score: Optional[int] = None
 
 class ReportCreate(ReportBase):
     pass

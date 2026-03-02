@@ -29,6 +29,7 @@ interface APIReport {
   created_at: string;
   report_content: string;
   chart_data?: ChartData;
+  sentiment_score?: number;
   owner_id: number;
 }
 
@@ -61,7 +62,7 @@ export default function DashboardPage() {
           const data: APIReport[] = await res.json();
           const enriched: Report[] = data.map((r) => ({
             ...r,
-            sentiment_score: 40 + ((r.id * 7) % 55),
+            sentiment_score: r.sentiment_score ?? 50,
           }));
           setReports(enriched);
         }
@@ -211,7 +212,7 @@ function ReportCard({
       onClick={() => router.push(`/reports/${report.id}`)}
       className="group relative h-52 bg-zinc-900/40 backdrop-blur-md border border-white/5 hover:border-emerald-500/30 rounded-2xl p-6 cursor-pointer overflow-hidden transition-colors duration-500"
     >
-      <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      <div className="absolute inset-0 bg-linear-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
       <div className="relative z-10 flex flex-col h-full justify-between">
         <div className="flex justify-between items-start">

@@ -23,6 +23,7 @@ class AnalysisResponse(BaseModel):
     company_name: str
     report_content: str
     chart_data: Optional[Dict[str, Any]] = None
+    sentiment_score: Optional[int] = None
 
 # --- Helpers ---
 def parse_agent_response(content: Any) -> str:
@@ -86,7 +87,22 @@ async def analyze_company(
         initial_state = {"messages": [("user", f"Analyze this company/ticker: {query_key}")], "api_key": api_key}
         result = await agent_app.ainvoke(initial_state)
         raw_content = result["messages"][-1].content
-        report_text = parse_agent_response(raw_content)
+        report_text_raw = parse_agent_response(raw_content)
+        
+        import json
+        try:
+            cleaned = report_text_raw.strip()
+            if cleaned.startswith("```json"):
+                cleaned = cleaned[7:-3].strip()
+            elif cleaned.startswith("```"):
+                cleaned = cleaned[3:-3].strip()
+            parsed = json.loads(cleaned)
+            sentiment_score = parsed.get("score", 50)
+            report_text = parsed.get("markdown", report_text_raw)
+        except Exception as json_e:
+            print(f"Failed to parse JSON sentiment: {json_e}")
+            sentiment_score = 50
+            report_text = report_text_raw
         
         # 5. FETCH VISUALS
         try:
@@ -103,11 +119,13 @@ async def analyze_company(
         if db_report:
             db_report.report_content = report_text
             db_report.chart_data = chart_data
+            db_report.sentiment_score = sentiment_score
         else:
             db_report = models.Report(
                 company_name=query_key,
                 report_content=report_text,
                 chart_data=chart_data,
+                sentiment_score=sentiment_score,
                 owner_id=current_user.id
             )
             db.add(db_report)
@@ -120,7 +138,8 @@ async def analyze_company(
             "id": db_report.id,
             "company_name": query_key,
             "report_content": report_text,
-            "chart_data": chart_data
+            "chart_data": chart_data,
+            "sentiment_score": sentiment_score
         }
 
         # 8. SAVE TO CACHE (12 Hour TTL)
