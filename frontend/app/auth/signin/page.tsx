@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Loader2, CheckCircle2, RotateCcw, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,8 +20,9 @@ interface MFAFactor {
   factor_type: string;
 }
 
-export default function SignInPage() {
+function SignInForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
@@ -32,6 +33,28 @@ export default function SignInPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [twoFactorCode, setTwoFactorCode] = useState("");
+
+  // --- PHASE 10: AUTO-LAUNCH MFA FOR OAUTH SESSIONS ---
+  useEffect(() => {
+    const checkExistingMFA = async () => {
+      // If the URL has ?mfa_required=true (thrown by UserContext)
+      // OR if we manually detect an active session sitting at AAL1
+      const isMfaForced = searchParams.get("mfa_required") === "true";
+
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (session || isMfaForced) {
+        const { data: aalData } =
+          await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+        if (aalData?.currentLevel === "aal1" && aalData?.nextLevel === "aal2") {
+          setAuthStatus("needs_2fa");
+        }
+      }
+    };
+    checkExistingMFA();
+  }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -363,7 +386,21 @@ function InputWrapper({ children }: { children: React.ReactNode }) {
   return (
     <div className="group relative">
       {children}
-      <div className="absolute bottom-0 left-0 w-0 h-[1px] bg-emerald-500 group-focus-within:w-full transition-all duration-500" />
+      <div className="absolute bottom-0 left-0 w-0 h-px bg-emerald-500 group-focus-within:w-full transition-all duration-500" />
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[#09090b]">
+          <Loader2 className="w-8 h-8 animate-spin text-emerald-500" />
+        </div>
+      }
+    >
+      <SignInForm />
+    </Suspense>
   );
 }
