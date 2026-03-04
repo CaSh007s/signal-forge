@@ -1,18 +1,55 @@
 import os
 import requests
 from datetime import datetime, timedelta
+from app.services.cache import CacheService
 
 def get_conversion_rate(base: str, target: str) -> float:
     if base == target: return 1.0
+    
+    cache_key = f"forex:{base}:{target}"
+    cached_rate = CacheService.get(cache_key)
+    if cached_rate:
+        return float(cached_rate)
+
     try:
         import yfinance as yf
         pair = f"{base}{target}=X"
         hist = yf.Ticker(pair).history(period="1d")
         if not hist.empty:
-            return float(hist['Close'].iloc[-1])
+            rate = float(hist['Close'].iloc[-1])
+            # Cache the rate for 24 hours (86400 seconds) to avoid API limits
+            CacheService.set(cache_key, rate, expire_seconds=86400)
+            return rate
     except Exception as e:
         print(f"Forex error {base}->{target}: {e}")
+    
     return 1.0
+
+def convert_chart_data(chart_data: dict, target_currency: str) -> dict:
+    """Converts a chart_data dictionary to a new target_currency."""
+    if not chart_data or chart_data.get("currency") == target_currency:
+        return chart_data
+        
+    base_currency = chart_data.get("currency", "USD")
+    rate = get_conversion_rate(base_currency, target_currency)
+    
+    if rate == 1.0 and base_currency != target_currency:
+        # If conversion fails and returns 1.0 but currencies are different, 
+        # we might want to log it or handle it, but for now we just return the original.
+        pass
+        
+    new_history = []
+    for item in chart_data.get("history", []):
+        new_history.append({
+            "date": item["date"],
+            "price": round(item["price"] * rate, 2)
+        })
+        
+    new_chart_data = chart_data.copy()
+    new_chart_data["currency"] = target_currency
+    new_chart_data["history"] = new_history
+    
+    return new_chart_data
 
 def get_stock_history(query: str, target_currency: str = "USD", timeframe: str = "3M"):
     """

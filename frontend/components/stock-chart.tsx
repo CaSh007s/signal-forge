@@ -29,8 +29,14 @@ export function StockChart({
   if (!data || data.length === 0) return null;
 
   const prices = data.map((d) => d.price);
-  const minPrice = Math.min(...prices);
-  const maxPrice = Math.max(...prices);
+  const minPrice =
+    prices.length > 0
+      ? prices.reduce((min, p) => (p < min ? p : min), prices[0])
+      : 0;
+  const maxPrice =
+    prices.length > 0
+      ? prices.reduce((max, p) => (p > max ? p : max), prices[0])
+      : 0;
   const buffer = (maxPrice - minPrice) * 0.1;
 
   return (
