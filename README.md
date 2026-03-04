@@ -25,7 +25,7 @@
 <br />
 
 <div align="center">
-  <img src="./screenshots/landing-desktop.png" alt="Signal Forge Landing Page" width="800" />
+  <img src="./screenshots/landing-desktop.png?raw=true&v=2.0" alt="Signal Forge Landing Page" width="800" />
 </div>
 
 <br />
@@ -48,24 +48,24 @@
     <td align="center" width="50%">
       <strong>Landing Page</strong><br />
       <em>Clean, distraction-free entry point.</em><br />
-      <img src="./screenshots/landing-desktop.png" width="100%" alt="Landing Page" />
+      <img src="./screenshots/landing-desktop.png?raw=true&v=2.0" width="100%" alt="Landing Page" />
     </td>
     <td align="center" width="50%">
       <strong>Secure Authentication</strong><br />
       <em>OAuth integration via Supabase Auth.</em><br />
-      <img src="./screenshots/signin-desktop.png" width="100%" alt="Signin Page" />
+      <img src="./screenshots/signin-desktop.png?raw=true&v=2.0" width="100%" alt="Signin Page" />
     </td>
   </tr>
   <tr>
     <td align="center" width="50%">
       <strong>The Agent at Work</strong><br />
       <em>Real-time logging of reasoning steps.</em><br />
-      <img src="./screenshots/agent-thinking.png" width="100%" alt="Agent Thinking" />
+      <img src="./screenshots/agent-thinking.png?raw=true&v=2.0" width="100%" alt="Agent Thinking" />
     </td>
     <td align="center" width="50%">
       <strong>The Final Report</strong><br />
       <em>Complete memo with charts & verdict.</em><br />
-      <img src="./screenshots/report-desktop.png" width="100%" alt="Report View" />
+      <img src="./screenshots/report-desktop.png?raw=true&v=2.0" width="100%" alt="Report View" />
     </td>
   </tr>
 </table>
@@ -77,11 +77,11 @@
   <tr>
     <td align="center" width="50%">
       <strong>Dashboard (Mobile)</strong><br />
-      <img src="./screenshots/dashboard-mobile.png" width="100%" alt="Mobile Dashboard" />
+      <img src="./screenshots/dashboard-mobile.png?raw=true&v=2.0" width="100%" alt="Mobile Dashboard" />
     </td>
     <td align="center" width="50%">
       <strong>Settings (Mobile)</strong><br />
-      <img src="./screenshots/settings-mobile.png" width="100%" alt="Mobile Settings" />
+      <img src="./screenshots/settings-mobile.png?raw=true&v=2.0" width="100%" alt="Mobile Settings" />
     </td>
   </tr>
 </table>
