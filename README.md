@@ -6,10 +6,11 @@
   </p>
   
   <p>
-    <a href="https://signalforge-oo7s.vercel.app/">🔴 Live Demo</a> • 
-    <a href="#gallery">📸 Gallery</a> • 
-    <a href="#tech-stack">🛠 Tech Stack</a> •
-    <a href="#author">👨‍💻 Author</a>
+    <a href="https://signalforge-oo7s.vercel.app/"><img src="https://img.shields.io/badge/Live_Demo-000000?style=for-the-badge&logo=vercel&logoColor=white" alt="Live Demo" /></a>
+    <a href="https://youtu.be/lVVnaFKRz3M"><img src="https://img.shields.io/badge/YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube" /></a>
+    <a href="#gallery"><img src="https://img.shields.io/badge/Gallery-18181B?style=for-the-badge" alt="Gallery" /></a>
+    <a href="#tech-stack"><img src="https://img.shields.io/badge/Tech_Stack-18181B?style=for-the-badge" alt="Tech Stack" /></a>
+    <a href="#author"><img src="https://img.shields.io/badge/Author-18181B?style=for-the-badge" alt="Author" /></a>
   </p>
 
   <p>
@@ -19,6 +20,12 @@
     <img src="https://img.shields.io/badge/Orchestration-LangGraph-FF4B4B?style=flat-square&logo=langchain" alt="LangGraph" />
     <img src="https://img.shields.io/badge/Database-Supabase-3ECF8E?style=flat-square&logo=supabase" alt="Supabase" />
   </p>
+</div>
+
+<br />
+
+<div align="center">
+  <img src="./screenshots/landing-desktop.png" alt="Signal Forge Landing Page" width="800" />
 </div>
 
 <br />
@@ -85,11 +92,13 @@
 
 <ul>
   <li><strong>🧠 Agentic Workflow:</strong> Powered by <strong>LangGraph</strong> & <strong>LangChain</strong> to handle complex reasoning loops.</li>
-  <li><strong>🚀 High-Performance Caching:</strong> Uses <strong>Redis</strong> (optional) for efficient state management and caching.</li>
+  <li><strong>� BYOK (Bring Your Own Key):</strong> Securely provide your own Gemini API key to unlock the engine and bypass daily rate limits.</li>
+  <li><strong>💱 Multi-Currency & Timelines:</strong> Dynamic charts with customizable timeframes (1M, 3M, 1Y, 5Y) and automatic base currency conversion (USD, EUR, GBP, INR, JPY).</li>
+  <li><strong>�🚀 High-Performance Caching:</strong> Uses <strong>Redis</strong> for efficient state management, rate limiting, and data caching.</li>
   <li><strong>📊 Live Market Data:</strong> Fetches real-time price history and technicals using <code>yfinance</code>.</li>
   <li><strong>🌍 Real-Time News:</strong> Scrapes and synthesizes the latest financial news via <strong>Tavily API</strong>.</li>
-  <li><strong>🔐 Secure Auth:</strong> Complete OAuth 2.0 implementation with Supabase Auth.</li>
-  <li><strong>💾 Persistent History:</strong> Autosaves every report to <strong>Supabase</strong> (PostgreSQL) via SQLAlchemy.</li>
+  <li><strong>🔐 Advanced Security:</strong> Complete OAuth 2.0 implementation with Supabase Auth, plus optional <strong>2FA (TOTP)</strong> protection.</li>
+  <li><strong>💾 Data Control:</strong> Persistent report history, with new capabilities to <strong>Export</strong> your archive or completely <strong>Purge</strong> your session data.</li>
   <li><strong>🎨 Responsive UI:</strong> A "Soft Dark Mode" interface built with Tailwind CSS, optimized for both desktop and mobile.</li>
 </ul>
 

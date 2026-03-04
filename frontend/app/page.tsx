@@ -105,7 +105,7 @@ export default function LandingPage() {
           >
             <div className="absolute inset-0 bg-emerald-500/10 blur-2xl rounded-full animate-pulse-slow" />
             <div className="relative z-10 font-brand font-bold text-transparent bg-clip-text bg-gradient-to-br from-emerald-400 to-emerald-700 text-lg tracking-widest uppercase">
-              SignalForge System v1.0
+              SignalForge System v2.0
             </div>
           </motion.div>
 
