@@ -65,7 +65,7 @@
     <td align="center" width="50%">
       <strong>The Final Report</strong><br />
       <em>Complete memo with charts & verdict.</em><br />
-      <img src="./screenshots/report-desktop.png?raw=true&v=2.0" width="100%" alt="Report View" />
+      <img src="./screenshots/agnet_report-desktop.png?raw=true&v=2.0" width="100%" alt="Report View" />
     </td>
   </tr>
 </table>
