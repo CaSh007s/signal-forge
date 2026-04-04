@@ -83,9 +83,9 @@ async def analyze_company(
             print(f"🔄 FORCING REGENERATION: {query_key}")
 
         # 3.5 CHECK API LIMITS
-        from app.services.gemini_resolver import ADMIN_EMAIL
+        from app.services.gemini_resolver import is_admin_email
         daily_usage = CacheService.get_daily_usage(current_user.id)
-        if daily_usage >= 3 and current_user.email != ADMIN_EMAIL:
+        if daily_usage >= 3 and not is_admin_email(current_user.email):
             print(f"🛑 RATE LIMIT BLOCKED FOR USER: {current_user.id}")
             raise HTTPException(status_code=429, detail="You have reached your 3 reports per day limit.")
 

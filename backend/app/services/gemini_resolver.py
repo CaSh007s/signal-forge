@@ -8,9 +8,22 @@ from app.models import User
 ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
 SERVER_GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
+def is_admin_email(email: str) -> bool:
+    if not ADMIN_EMAIL or not email:
+        return False
+        
+    admin_emails = [e.strip(' "\'').lower() for e in ADMIN_EMAIL.split(',')]
+    user_e = email.strip(' "\'').lower()
+    
+    for a_email in admin_emails:
+        if user_e == a_email or user_e.startswith(a_email + "@"):
+            return True
+            
+    return False
+
 def resolve_gemini_key(user: User) -> Optional[str]:
     # 1. Admin Bypass
-    if ADMIN_EMAIL and user.email == ADMIN_EMAIL:
+    if is_admin_email(user.email):
         if SERVER_GOOGLE_API_KEY:
             return SERVER_GOOGLE_API_KEY
     
